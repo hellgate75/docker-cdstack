@@ -57,6 +57,8 @@ COPY bin/logs-jenkins.sh /usr/local/bin/jenkins-logs
 
 COPY bin/install-plugins.sh /usr/local/bin/install-jenkins-plugins
 
+COPY bin/install-credentials.sh /usr/local/bin/install-jenkins-credentials
+
 COPY bin/execute-cli-file.sh /usr/local/bin/execute-cli-file
 
 COPY bin/execute-cli-command.sh /usr/local/bin/execute-cli-command
@@ -84,6 +86,8 @@ COPY files/executors.groovy $JENKINS_BIN_HOME/ref/init.groovy.d/executors.groovy
 COPY files/create-ssh-credentials.groovy $JENKINS_BIN_HOME/ref/init.groovy.d/create-ssh-credentials.groovy
 
 COPY files/add-agent-node.groovy.template $JENKINS_HOME/.jenkins/add-agent-node.groovy.template
+
+COPY files/create-custom-ssh-credentials.groovy.template $JENKINS_HOME/.jenkins/create-custom-ssh-credentials.groovy.template
 
 COPY files/hudson.plugins.git.GitTool.xml $JENKINS_HOME/hudson.plugins.git.GitTool.xml
 

@@ -29,6 +29,7 @@ services:
       - "GIT_USER_EMAIL=hellgate75@gmail.com"
       - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/jenkins-plugins.txt"
       - "PROJECT_LIST_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
+      - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
       - "SONARQUBE_URL=http://sonar.cdnet:9000/sonar"
       - "SONARQUBE_APIKEY=${SONAR_APIKEY}"
       - "SONARQUBE_USER=sonar"

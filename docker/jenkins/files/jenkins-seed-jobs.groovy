@@ -34,8 +34,8 @@ job('_create_2p_project') {
         stringParam('credentialsRef', 'base_credentials', 'Reference to Jenkins credentials (default: base_credentials)')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
         stringParam('branchToBuild', 'master', 'Branch(es) to build')
-        stringParam('stagingPipeline', 'pipelines/my-project/staging/pipeline.groovy', 'Staging jobdsl/Jenkinsfile pipeline script definition path')
-        stringParam('prodPipeline', 'pipelines/my-project/prod/pipeline.groovy', 'Prod jobdsl/Jenkinsfile pipeline script definition path')
+        stringParam('stagingPipeline', 'pipelines/staging/Jenkinsfile', 'Staging jobdsl(groovy)/Jenkinsfile pipeline script definition path')
+        stringParam('prodPipeline', 'pipelines/prod/Jenkinsfile', 'Prod jobdsl(groovy)/Jenkinsfile pipeline script definition path')
     }
     steps {
         dsl {
@@ -58,7 +58,7 @@ job('_create_1p_project') {
         stringParam('credentialsRef', 'base_credentials', 'Reference to Jenkins credentials (default: base_credentials)')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
         stringParam('branchToBuild', 'master', 'Branch(es) to build')
-        stringParam('pipeline', 'pipelines//my-project/pipeline.groovy', 'jobdsl/Jenkinsfile pipeline script definition path')
+        stringParam('pipeline', 'pipelines/Jenkinsfile', 'jobdsl(groovy)/Jenkinsfile pipeline script definition path')
     }
     steps {
         dsl {
