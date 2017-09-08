@@ -8,25 +8,59 @@ Docker Image for Nexus® OSS Node. This Docker image provides environment, JVM a
 
 Nexus® OSS software (previously called Sonar) is an open source artifact repository platform, dedicated to store artifacts from different technologies.
 
+<p align="center">
+<img src="https://www.sonatype.com/hs-fs/hubfs/Icons/Store.png?t=1504881084791&width=105&height=105&name=Store.png" width="105" height="105"/>
+</p>
 
+<p align="center">
 Store
+</p>
 
+<p align="center">
 Give your teams a single source of truth for every component they use.
+</p>
 
 
+
+<p align="center">
+<img src="https://www.sonatype.com/hs-fs/hubfs/Icons/Adapt_Icon.png?t=1504881084791&width=105&height=105&name=Adapt_Icon.png" width="87" height="95"/>
+</p>
+
+<p align="center">
 Cache
+</p>
 
+<p align="center">
 Optimize build performance and reliability by caching proxies of remote repositories.
+</p>
 
 
+
+<p align="center">
+<img src="https://www.sonatype.com/hs-fs/hubfs/Icons/Cache_Icon.png?t=1504881084791&width=105&height=105&name=Cache_Icon.png" width="105" height="105"/>
+</p>
+
+<p align="center">
 Adapt
+</p>
 
+<p align="center">
 Provide universal coverage for all major package formats and types.
+</p>
 
 
+
+<p align="center">
+<img src="https://www.sonatype.com/hs-fs/hubfs/Icons/Scale_Icon.png?t=1504881084791&width=105&height=105&name=Scale_Icon.png" width="105" height="105"/>
+</p>
+
+<p align="center">
 Scale
+</p>
 
+<p align="center">
 Install on an unlimited amount of servers for an unlimited amount of users.
+</p>
 
 
 ### Docker Image information ###

@@ -8,10 +8,19 @@ This README would normally document whatever steps are necessary to get your app
 * [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
 
 
-### Prerequisites ###
+### Pre-requisites ###
 
-In order to execute compose you need :
-* docker v.  
+In order to execute compose you must ensure installation of :
+* docker v. 17.0+
+* docker-compose v. 1.13.0+
+
+In order to execute swarm cluster you ensure installation of :
+* docker v. 17.0+
+* docker-compose v. 1.13.0+
+* docker-machine v. 0.12.0+
+* VirtualBox v. 5.1+
+
+Scripting for automate execution of stack and Swarm environment are Lixux, Unix and Mac-OS compliant. Maybe you need install some further packages for monitoring and supporting pipeline execution (that can be required more for AWS and Azure future implementations).
 
 
 ### How to backup your volumes and restore it? ###
@@ -70,6 +79,40 @@ For further information please read related docker images documentation at :
 * [Nexus 3 OSS](https://github.com/hellgate75/doker-cdstack/tree/master/docker/nexus3)
 
 * [SonarQube](https://github.com/hellgate75/doker-cdstack/tree/master/docker/sonarqube)
+
+
+### Local or Remote Swarm Option ###
+
+We provide and automated Swarm Cluster procedure, that creates swarm nodes via docker machine virtualbox driver.
+
+Access to Swarm node management features is behalf bash shell script [/swarm/manage-swarm-env.sh](https://github.com/hellgate75/doker-cdstack/tree/master/swarm/manage-swarm-env.sh)
+
+In folder [/swarm](https://github.com/hellgate75/doker-cdstack/tree/master/swarm/) you can access to [manage-swarm-env.sh](https://github.com/hellgate75/doker-cdstack/tree/master/swarm/manage-swarm-env.sh) script file.
+
+
+Command Syntax is :
+
+```bash
+manage-swarm-env.sh environment --create|--destroy|--start|--stop|--redeploy [environment] [suffix]
+[environment]      Type of environment to use [local, aws or azure]
+--create     Crete or update platform in case of stop of nodes
+       [--force-rebuild]  Force rebuild local docker images
+       [suffix]           If used qualify name of local or remote machines
+--destroy    Destroy Platform
+       [suffix]           If used qualify name of local or remote machines
+--start      Start Platform Virtual Machines
+       [suffix]           If used qualify name of local or remote machines
+--stop         Stop Platform Virtual Machines
+       [suffix]           If used qualify name of local or remote machines
+--redeploy    Re-deploy Continuous Delivery stack preserving volumes
+       [--rebuild]        Rebuild and push docker imges from source
+       [--copyyaml]       Copy Swarm Script folder and fix registry path
+       [--force-rebuild]  Force rebuild local docker images
+       [suffix]           If used qualify name of local or remote machines
+```
+
+Unique available environment at the moment is : `local`
+
 
 ### License ###
 

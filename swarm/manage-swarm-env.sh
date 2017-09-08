@@ -16,7 +16,7 @@ ENVIRONMENT="$1"
 ##  - environment (local|azure) and/or :                                ##
 ##  - suffix (suffix for docker-machine name)                           ##
 ##########################################################################
-if [[ "local" == "$1" ]]; then
+if [[ "local" == "$ENVIRONMENT" ]]; then
   source scripts/manage-local-swarm.sh ${@:2}
   exit 0
 # elif [[ "azure" == "$1" ]]; then

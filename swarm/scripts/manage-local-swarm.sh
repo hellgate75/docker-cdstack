@@ -65,9 +65,10 @@ elif [[ "--start" == "$1" ]]; then
       ## Copying swarm stack source folder ...
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
       ## Copying source folder for further deployment ...
-      echo "$(copyLocalSourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "/hosthome")"
+       echo "$(copySourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "$DOCKER_FOLDER_PATH")"
     else
       LEADER_IP="$(docker-machine ip $PROJECT_PREFIX-leader$SUFFIX)"
       echo "WARNING : Leader Swardocker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"m cluster node is running yet. Nothing to do!!"
@@ -175,24 +176,24 @@ elif [[ "--create" == "$1" ]]; then
   fi
   echo "Using suffix : $(echo "$SUFFIX" | sed 's/^-//g')"
   ## Local docker-machine Swarm Cluster
-  LEADER_MEMORY="1024" #1 GB
-  LEADER_DISK="50000" #30 GB
-  LEADER_CUPS="1"
-  JENKINS_MEMORY="2048" #1 GB
-  JENKINS_DISK="30000" #30 GB
-  JENKINS_CUPS="1"
-  NEXUS_MEMORY="2048" #1 GB
-  NEXUS_DISK="30000" #30 GB
-  NEXUS_CUPS="1"
-  SONAR_MEMORY="2560" #2 GB
-  SONAR_DISK="40000" #40 GB
-  SONAR_CUPS="2"
+  LEADER_MEMORY="${SWARM_LOCAL_LEADER_MEMORY:-"1024"}" #1 GB
+  LEADER_DISK="${SWARM_LOCAL_LEADER_DISK:-"50000"}" #50 GB
+  LEADER_CUPS="${SWARM_LOCAL_LEADER_CUPS:-"1"}"
+  JENKINS_MEMORY="${SWARM_LOCAL_JENKINS_MEMORYS:-"1024"}" #1 GB
+  JENKINS_DISK="${SWARM_LOCAL_JENKINS_DISK:-"30000"}" #30 GB
+  JENKINS_CUPS="${SWARM_LOCAL_JENKINS_CUPS:-"1"}"
+  NEXUS_MEMORY="${SWARM_LOCAL_NEXUS_MEMORY:-"1024"}" #1 GB
+  NEXUS_DISK="${SWARM_LOCAL_NEXUS_DISK:-"30000"}" #30 GB
+  NEXUS_CUPS="${SWARM_LOCAL_NEXUS_CUPS:-"1"}"
+  SONAR_MEMORY="${SWARM_LOCAL_SONAR_MEMORY:-"2560"}" #2.5 GB
+  SONAR_DISK="${SWARM_LOCAL_SONAR_DISK:-"40000"}" #40 GB
+  SONAR_CUPS="${SWARM_LOCAL_SONAR_CUPS:-"2"}"
   DOCKER_COMPOSE_VERSION="1.15.0"
   PROVISION_JENKINS="0"
   PROVISION_NEXUS="0"
   PROVISION_SONAR="0"
   if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-leader$SUFFIX)" ]]; then
-    echo "Creating Swarm Master : $PROJECT_PREFIX-leader ..."
+    echo "Creating Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
     echo "Memory : $LEADER_MEMORY MB"
     echo "Disk : $LEADER_DISK MB"
     echo "CPUs : $LEADER_CUPS"
@@ -241,7 +242,7 @@ elif [[ "--create" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=leader $PROJECT_PREFIX-leader$SUFFIX"
 
     ## create swarm folder on leader Swarm Cluster docker-machine, pull portainer.io docker image from Docker Hub librraries, and deploy portainer stack on Swarm Cluster (only on leader node)
-    echo "Creating Portainer.IO on Swarm Master : $PROJECT_PREFIX-leader ..."
+    echo "Creating Portainer.IO on Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull portainer/portainer"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker deploy -c ./swarm/docker-compose-portainer.yml --resolve-image \"always\" --prune $PROJECT_PREFIX-cdmainstack"
@@ -258,13 +259,15 @@ elif [[ "--create" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull registry:2"
 
     ## Deploy rehistry stack
-    echo "Creating Docker registry v2 on Swarm Master : $PROJECT_PREFIX-leader ..."
+    echo "Creating Docker registry v2 on Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker deploy -c ./swarm/docker-compose-registry.yml --resolve-image \"always\" --prune $PROJECT_PREFIX-cdregistrystack"
 
     sleep 10
 
     ## Fill in Continuous Delivery deployment stack docker registry reference for worker local docker push
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
 
     ## Configure local docker registry on Portainer.IO using authorised POST call
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}'\" http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"local\\\",\\\"URL\\\":\\\"$LEADER_IP:5000\\\",\\\"Authentication\\\":true,\\\"Username\\\":\\\"admin\\\",\\\"Password\\\":\\\"admin\\\"}\" http://$LEADER_IP:9091/api/registries"
@@ -280,13 +283,13 @@ elif [[ "--create" == "$1" ]]; then
 
   eval $(docker-machine env $PROJECT_PREFIX-jenkins$SUFFIX)
   if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-jenkins$SUFFIX)" ]]; then
-    echo "Creating Swarm Worker : $PROJECT_PREFIX-jenkins ..."
+    echo "Creating Swarm Worker : $PROJECT_PREFIX-jenkins$SUFFIX ..."
     echo "Memory : $JENKINS_MEMORY MB"
     echo "Disk : $JENKINS_DISK MB"
     echo "CPUs : $JENKINS_CUPS"
     docker-machine create --driver "virtualbox" --engine-insecure-registry "http://$LEADER_IP:5000" --engine-opt experimental=true \
                           --engine-label projectnodename=jenkins --virtualbox-memory "$JENKINS_MEMORY" --virtualbox-disk-size "$JENKINS_DISK" \
-                          --virtualbox-cpu-count "$JENKINS_CUPS" --virtualbox-share-folder "$(pwd):hosthome" $PROJECT_PREFIX-jenkins$SUFFIX
+                          --virtualbox-cpu-count "$JENKINS_CUPS" --virtualbox-share-folder "$(pwd):hosthome"  $PROJECT_PREFIX-jenkins$SUFFIX
 
     createDockerInSolidVolume "$PROJECT_PREFIX-jenkins$SUFFIX"
 
@@ -315,13 +318,13 @@ elif [[ "--create" == "$1" ]]; then
     echo "Swarm Worker : $PROJECT_PREFIX-jenkins already exists"
   fi
   if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-nexus$SUFFIX)" ]]; then
-    echo "Creating Swarm Worker : $PROJECT_PREFIX-nexus ..."
+    echo "Creating Swarm Worker : $PROJECT_PREFIX-nexus$SUFFIX ..."
     echo "Memory : $NEXUS_MEMORY MB"
     echo "Disk : $NEXUS_DISK MB"
     echo "CPUs : $NEXUS_CUPS"
     docker-machine create --driver "virtualbox" --engine-insecure-registry "http://$LEADER_IP:5000" --engine-opt experimental=true \
                           --engine-label projectnodename=nexus3 --virtualbox-memory "$NEXUS_MEMORY" --virtualbox-disk-size "$NEXUS_DISK" \
-                          --virtualbox-cpu-count "$NEXUS_CUPS" --virtualbox-share-folder "$(pwd):hosthome" $PROJECT_PREFIX-nexus$SUFFIX
+                          --virtualbox-cpu-count "$NEXUS_CUPS" --virtualbox-share-folder "$(pwd):hosthome"  $PROJECT_PREFIX-nexus$SUFFIX
 
     createDockerInSolidVolume "$PROJECT_PREFIX-nexus$SUFFIX"
 
@@ -362,13 +365,13 @@ elif [[ "--create" == "$1" ]]; then
   fi
 
   if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-sonarqube$SUFFIX)" ]]; then
-    echo "Creating Swarm Worker : $PROJECT_PREFIX-sonarqube ..."
+    echo "Creating Swarm Worker : $PROJECT_PREFIX-sonarqube$SUFFIX ..."
     echo "Memory : $SONAR_MEMORY MB"
     echo "Disk : $SONAR_DISK MB"
     echo "CPUs : $SONAR_CUPS"
     docker-machine create --driver "virtualbox" --engine-insecure-registry "http://$LEADER_IP:5000" --engine-opt experimental=true \
                           --engine-label projectnodename=sonarqube --virtualbox-memory "$SONAR_MEMORY" --virtualbox-disk-size "$SONAR_DISK" \
-                          --virtualbox-cpu-count "$SONAR_CUPS" --virtualbox-share-folder "$(pwd):hosthome" $PROJECT_PREFIX-sonarqube$SUFFIX
+                          --virtualbox-cpu-count "$SONAR_CUPS" --virtualbox-share-folder "$(pwd):hosthome"  $PROJECT_PREFIX-sonarqube$SUFFIX
 
     createDockerInSolidVolume "$PROJECT_PREFIX-sonarqube$SUFFIX"
 
@@ -420,13 +423,13 @@ elif [[ "--create" == "$1" ]]; then
   ## if all docker worker machines has been created, connect to leader, download sources, build docker images and push all docker images on leader docker registry
   if [[ "1" == "$PROVISION_JENKINS" && "1" == "$PROVISION_NEXUS" && "1" == "$PROVISION_SONAR" ]]; then
     ## Copying source folder for docker image build ...
-    echo "$(copyLocalSourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "/hosthome")"
+     echo "$(copySourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "$DOCKER_FOLDER_PATH")"
 
     ## Build docker images
     echo "Building Docker images and pushing them to the local registry."
     echo "Please wait since docker build and push complete ..."
     # echo "$(buildCDDockerImages "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
-    echo "Building $PROJECT_PREFIX-jenkins docker image"
+    echo "Building $PROJECT_PREFIX-jenkins$SUFFIX docker image"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-jenkins")"  ]]; then
@@ -440,16 +443,16 @@ elif [[ "--create" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
+        bash -c "cd $DOCKER_FOLDER_PATH/jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
         wait
       else
         bash -c "docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-jenkins$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
       else
         echo "Jenkins docker image export already exists ..."
       fi
@@ -478,13 +481,13 @@ elif [[ "--create" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
+        bash -c "cd $DOCKER_FOLDER_PATH/jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-jenkins$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
       else
         echo "Jenkins docker image export already exists ..."
       fi
@@ -494,9 +497,8 @@ elif [[ "--create" == "$1" ]]; then
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
     fi
-    # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins &&  docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins && docker rmi -f hellgate75/$PROJECT_PREFIX-jenkins"
     ## connect to leader, download Nexus3 source, build Jenkins docker images and push Jenkins docker image on leader docker registry
-    echo "Building $PROJECT_PREFIX-nexus docker image"
+    echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-nexus")" ]]; then
@@ -510,16 +512,16 @@ elif [[ "--create" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
+        bash -c "cd $DOCKER_FOLDER_PATH/nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
         wait
       else
         bash -c "docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-nexus$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
       else
         echo "Nexus 3 docker image export already exists ..."
       fi
@@ -548,13 +550,13 @@ elif [[ "--create" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
+        bash -c "cd $DOCKER_FOLDER_PATH/nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-nexus$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
       else
         echo "Nexus 3 docker image export already exists ..."
       fi
@@ -564,11 +566,11 @@ elif [[ "--create" == "$1" ]]; then
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
     fi
-    # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker rmi -f hellgate75/$PROJECT_PREFIX-nexus"
     ## connect to sonarqube worker docker-machine, and pull mysql docker image from docker hub libraries (faster stack creation)
-    ## connect to leader, download SonarQube source, build Jenkins docker images and push Jenkins docker image on leader docker registry
-    echo "Building $PROJECT_PREFIX-sonarqube docker image"
+    echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull mysql:5.7"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker tag mysql:5.7 $LEADER_IP:5000/hellgate75/mysql:5.7"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/mysql:5.7"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
@@ -582,16 +584,16 @@ elif [[ "--create" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
+        bash -c "cd $DOCKER_FOLDER_PATH/sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
         wait
       else
         bash -c "docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-sonarqube$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
       else
         echo "SonarQube docker image export already exists ..."
       fi
@@ -620,13 +622,13 @@ elif [[ "--create" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
+        bash -c "cd $DOCKER_FOLDER_PATH/sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-sonarqube$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
       else
         echo "SonarQube docker image export already exists ..."
       fi
@@ -636,7 +638,6 @@ elif [[ "--create" == "$1" ]]; then
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
     fi
-    # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube && docker rmi -f hellgate75/$PROJECT_PREFIX-sonarqube"
 
     ## create continuous delivery stack on Swarm cluster, connecting to leader (manager) node
     echo "Creating cd service stack ..."
@@ -722,13 +723,13 @@ elif [[ "--redeploy" == "$1" ]]; then
 
   if  [[ "1" == "$REBUILD" ]]; then
     ## Copying source folder for docker image rebuild ...
-    echo "$(copyLocalSourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "/hosthome")"
+     echo "$(copySourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "$DOCKER_FOLDER_PATH")"
 
     ## Build docker images
     echo "Building Docker images and pushing them to the local registry."
     echo "Please wait since docker build and push complete ..."
     # echo "$(buildCDDockerImages "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
-    echo "Building $PROJECT_PREFIX-jenkins docker image"
+    echo "Building $PROJECT_PREFIX-jenkins$SUFFIX docker image"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-jenkins")"  ]]; then
@@ -742,16 +743,16 @@ elif [[ "--redeploy" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
+        bash -c "cd $DOCKER_FOLDER_PATH/jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
         wait
       else
         bash -c "docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-jenkins$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
       else
         echo "Jenkins docker image export already exists ..."
       fi
@@ -780,13 +781,13 @@ elif [[ "--redeploy" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
+        bash -c "cd $DOCKER_FOLDER_PATH/jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-jenkins$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "jenkins"
       else
         echo "Jenkins docker image export already exists ..."
       fi
@@ -798,7 +799,7 @@ elif [[ "--redeploy" == "$1" ]]; then
     fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins &&  docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins && docker rmi -f hellgate75/$PROJECT_PREFIX-jenkins"
     ## connect to leader, download Nexus3 source, build Jenkins docker images and push Jenkins docker image on leader docker registry
-    echo "Building $PROJECT_PREFIX-nexus docker image"
+    echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-nexus")" ]]; then
@@ -812,16 +813,16 @@ elif [[ "--redeploy" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
+        bash -c "cd $DOCKER_FOLDER_PATH/nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
         wait
       else
         bash -c "docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-nexus$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
       else
         echo "Nexus 3 docker image export already exists ..."
       fi
@@ -850,13 +851,13 @@ elif [[ "--redeploy" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
+        bash -c "cd $DOCKER_FOLDER_PATH/nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-nexus$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "nexus"
       else
         echo "Nexus 3 docker image export already exists ..."
       fi
@@ -868,9 +869,10 @@ elif [[ "--redeploy" == "$1" ]]; then
     fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker rmi -f hellgate75/$PROJECT_PREFIX-nexus"
     ## connect to sonarqube worker docker-machine, and pull mysql docker image from docker hub libraries (faster stack creation)
-    ## connect to leader, download SonarQube source, build Jenkins docker images and push Jenkins docker image on leader docker registry
-    echo "Building $PROJECT_PREFIX-sonarqube docker image"
+      echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull mysql:5.7"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker tag mysql:5.7 $LEADER_IP:5000/hellgate75/mysql:5.7"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/mysql:5.7"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
@@ -884,16 +886,16 @@ elif [[ "--redeploy" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
+        bash -c "cd $DOCKER_FOLDER_PATH/sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
         wait
       else
         bash -c "docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-sonarqube$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
       else
         echo "SonarQube docker image export already exists ..."
       fi
@@ -922,13 +924,13 @@ elif [[ "--redeploy" == "$1" ]]; then
         fi
         ## rebuild and tag new docker image for Jenkins
         echo "Building docker image ..."
-        bash -c "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
+        bash -c "cd $DOCKER_FOLDER_PATH/sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
         wait
       fi
-      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/jenkins$SUFFIX.tar ]]; then
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-sonarqube$SUFFIX.tar ]]; then
         echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" locally ..."
         echo "Please wait for process to complete ..."
-        exportContinuosDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "sonarqube"
       else
         echo "SonarQube docker image export already exists ..."
       fi
@@ -945,6 +947,7 @@ elif [[ "--redeploy" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
     ## Fill in Continuous Delivery deployment stack docker registry reference for worker local docker push
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
   fi
   ## redeploy continuous delivery stack on Swarm cluster, connecting to leader (manager) node

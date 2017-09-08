@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DOCKER_FOLDER_PATH="$(cd $(pwd)/../docker && pwd)"
+
 ##########################################################################
 ## Define project name and prject prefix                                ##
 ##########################################################################
@@ -285,10 +287,10 @@ function buildCDDockerImages() {
 ## Returns:                                                             ##
 ##   (none)                                                             ##
 ##########################################################################
-function exportContinuosDeliveryDockerImage() {
+function exportContinuousDeliveryDockerImage() {
   mkdir -p $1/docker-images
-  rm -f $1/docker-images/$4$2.tar
-  docker save --output $1/docker-images/$4$2.tar $3:5000/hellgate75/$PROJECT_PREFIX-$4
+  rm -f $1/docker-images/$ENVIRONMENT-$4$2.tar
+  docker save --output $1/docker-images/$ENVIRONMENT-$4$2.tar $3:5000/hellgate75/$PROJECT_PREFIX-$4
 }
 
 ##########################################################################
@@ -304,9 +306,9 @@ function exportContinuosDeliveryDockerImage() {
 ##   (none)                                                             ##
 ##########################################################################
 function copyAndInstallImageFromDockerMachine() {
-  docker-machine ssh $5 "mkdir -p /var/lib/home/docker/swarm/docker-images && rm -f /var/lib/home/docker/swarm/docker-images/$4$2.tar"
-  docker-machine scp $1/docker-images/$4$2.tar $5:/var/lib/home/docker/swarm/docker-images/$4$2.tar
-  docker-machine ssh $5 "docker load --quiet --input /var/lib/home/docker/swarm/docker-images/$4$2.tar"
+  docker-machine ssh $5 "mkdir -p /var/lib/home/docker/swarm/docker-images && rm -f /var/lib/home/docker/swarm/docker-images/$ENVIRONMENT-$4$2.tar"
+  docker-machine scp $1/docker-images/$ENVIRONMENT-$4$2.tar $5:/var/lib/home/docker/swarm/docker-images/$ENVIRONMENT-$4$2.tar
+  docker-machine ssh $5 "docker load --quiet --input /var/lib/home/docker/swarm/docker-images/$ENVIRONMENT-$4$2.tar"
 }
 
 ##########################################################################
@@ -322,7 +324,7 @@ function copyAndInstallImageFromDockerMachine() {
 ##   (none)                                                             ##
 ##########################################################################
 function copyAndInstallImageLocalDockerMachine() {
-  docker-machine ssh $5 "mkdir -p /var/lib/home/docker/swarm/docker-images && rm -f /var/lib/home/docker/swarm/docker-images/$4$2.tar"
-  docker-machine ssh $5 "cp $1/docker-images/$4$2.tar /var/lib/home/docker/swarm/docker-images/$4$2.tar"
-  docker-machine ssh $5 "docker load --quiet --input /var/lib/home/docker/swarm/docker-images/$4$2.tar"
+  docker-machine ssh $5 "mkdir -p /var/lib/home/docker/swarm/docker-images && rm -f /var/lib/home/docker/swarm/docker-images/$ENVIRONMENT-$4$2.tar"
+  docker-machine ssh $5 "cp $1/docker-images/$ENVIRONMENT-$4$2.tar /var/lib/home/docker/swarm/docker-images/$ENVIRONMENT-$4$2.tar"
+  docker-machine ssh $5 "docker load --quiet --input /var/lib/home/docker/swarm/docker-images/$ENVIRONMENT-$4$2.tar"
 }
