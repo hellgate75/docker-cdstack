@@ -31,6 +31,7 @@ job('_create_2p_project') {
     concurrentBuild(false)
     parameters {
         stringParam('name', '', 'Project Name')
+        stringParam('credentialsRef', 'base_credentials', 'Reference to Jenkins credentials (default: base_credentials)')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
         stringParam('branchToBuild', 'master', 'Branch(es) to build')
         stringParam('stagingPipeline', 'pipelines/my-project/staging/pipeline.groovy', 'Staging jobdsl/Jenkinsfile pipeline script definition path')
@@ -38,10 +39,10 @@ job('_create_2p_project') {
     }
     steps {
         dsl {
-          text("if(stagingPipeline) pipelineJob(name+'-staging') { definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(stagingPipeline)}}}; ")
+          text("if(stagingPipeline) pipelineJob(name+'-staging') { definition {cpsScm {scm {git {branch(branchToBuild);remote {credentials(credentialsRef);url(gitUrl)}}}; scriptPath(stagingPipeline)}}}; ")
         }
         dsl {
-          text("if(prodPipeline) pipelineJob(name+'-production') { definition { cpsScm { scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(prodPipeline)}}}; ")
+          text("if(prodPipeline) pipelineJob(name+'-production') { definition { cpsScm { scm {git {branch(branchToBuild);remote {credentials(credentialsRef);url(gitUrl)}}}; scriptPath(prodPipeline)}}}; ")
         }
     }
 }
@@ -54,13 +55,14 @@ job('_create_1p_project') {
     concurrentBuild(false)
     parameters {
         stringParam('name', '', 'Project Name')
+        stringParam('credentialsRef', 'base_credentials', 'Reference to Jenkins credentials (default: base_credentials)')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
         stringParam('branchToBuild', 'master', 'Branch(es) to build')
         stringParam('pipeline', 'pipelines//my-project/pipeline.groovy', 'jobdsl/Jenkinsfile pipeline script definition path')
     }
     steps {
         dsl {
-          text("if(pipeline) pipelineJob(name+'-pipeline') {definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(pipeline)}}}; ")
+          text("if(pipeline) pipelineJob(name+'-pipeline') {definition {cpsScm {scm {git {branch(branchToBuild);remote {credentials(credentialsRef);url(gitUrl)}}}; scriptPath(pipeline)}}}; ")
         }
     }
 }
