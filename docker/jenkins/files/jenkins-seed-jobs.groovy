@@ -1,7 +1,7 @@
 #!groovy
 
 def hostProjPath = '/jenkins/pipelines/projects'
-def params = [CLOUD: 'local', REGION: '', REGISTRY: 'lbgvanilla', HOST_PROJECT_PATH: hostProjPath, INT_DOMAIN: 'riglet']
+def params = [CLOUD: 'local', REGION: '', REGISTRY: 'cddocker', HOST_PROJECT_PATH: hostProjPath, INT_DOMAIN: 'cdnet']
 def nodeProps = jenkins.model.Jenkins.getInstance().getGlobalNodeProperties()
 def envVars = nodeProps.get(hudson.slaves.EnvironmentVariablesNodeProperty)
 if (envVars == null) {
@@ -27,13 +27,13 @@ GlobalLibraries.get().setLibraries([pipelines])
 import javaposse.jobdsl.dsl.DslScriptLoader
 import javaposse.jobdsl.plugin.JenkinsJobManagement
 def seedJob = '''
-job('_create_dls_2s_project') {
+job('_create_2p_project') {
     parameters {
         stringParam('name', '', 'Project Name')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
         stringParam('branchToBuild', 'master', 'Branch(es) to build')
-        stringParam('stagingPipeline', 'pipelines/staging.groovy', 'Staging jobdsl pipeline definition path')
-        stringParam('prodPipeline', 'pipelines/prod.groovy', 'Prod pipeline jobdsl definition path')
+        stringParam('stagingPipeline', 'pipelines/my-project/staging/pipeline.groovy', 'Staging jobdsl/Jenkinsfile pipeline script definition path')
+        stringParam('prodPipeline', 'pipelines/my-project/prod/pipeline.groovy', 'Prod jobdsl/Jenkinsfile pipeline script definition path')
     }
     steps {
         dsl {
@@ -48,37 +48,21 @@ job('_create_dls_2s_project') {
 def workspace = new File('.')
 def jobManagement = new JenkinsJobManagement(System.out, [:], workspace)
 new DslScriptLoader(jobManagement).runScript(seedJob)
-def seedJob = '''
-job('_create_dls_1s_project') {
+def seedJob2 = '''
+job('_create_1p_project') {
     parameters {
         stringParam('name', '', 'Project Name')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
         stringParam('branchToBuild', 'master', 'Branch(es) to build')
-        stringParam('pipeline', 'pipeline.groovy', 'Pipeline jobdsl definition path')
+        stringParam('pipeline', 'pipelines//my-project/pipeline.groovy', 'jobdsl/Jenkinsfile pipeline script definition path')
     }
     steps {
         dsl {
-          text("if(stagingPipeline) pipelineJob(name+'-pipeline') {triggers {scm('H/5 * * * *')}; definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(pipeline)}}}; ")
+          text("if(pipeline) pipelineJob(name+'-pipeline') {triggers {scm('H/5 * * * *')}; definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(pipeline)}}}; ")
         }
     }
 }
 '''
-'''
-def workspace = new File('.')
-def jobManagement = new JenkinsJobManagement(System.out, [:], workspace)
-new DslScriptLoader(jobManagement).runScript(seedJob)
-def seedJob = '''
-job('_create_jnks_project') {
-    parameters {
-        stringParam('name', '', 'Project Name')
-        stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
-        stringParam('branchToBuild', 'master', 'Branch(es) to build')
-        stringParam('jenkinsFile', 'Jenkinsfile', 'Jeninsfile definition path')
-    }
-    steps {
-        dsl {
-          text("if(stagingPipeline) pipelineJob(name+'-pipeline') {triggers {scm('H/5 * * * *')}; definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(jenkinsFile)}}}; ")
-        }
-    }
-}
-'''
+def workspace2 = new File('.')
+def jobManagement2 = new JenkinsJobManagement(System.out, [:], workspace2)
+new DslScriptLoader(jobManagement2).runScript(seedJob2)
