@@ -1,4 +1,6 @@
 ace-editor
+active-directory
+parameterized-trigger
 ant
 antisamy-markup-formatter
 authentication-tokens
@@ -73,3 +75,4 @@ ws-cleanup
 maven-plugin
 bitbucket-pullrequest-builder
 bitbucket
+job-dsl

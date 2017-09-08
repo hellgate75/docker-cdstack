@@ -16,7 +16,7 @@ AGENT_GRROVY_TEMPLATE_FILE="$JENKINS_HOME/.jenkins/add-agent-node.groovy.templat
 AGENT_GRROVY_SCRIPT_FILE="$JENKINS_HOME/.jenkins/add-agent-node-$SALT.groovy"
 
 function download_file() {
-  if [[ -z "$(echo $2|grep -i 'https://')" ]]; then
+  if ! [[ -z "$(echo $2|grep -i 'https://')" ]]; then
     curl -sSL -o $1 $2
     return "$?"
   else

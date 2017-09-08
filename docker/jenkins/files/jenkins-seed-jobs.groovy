@@ -28,6 +28,7 @@ import javaposse.jobdsl.dsl.DslScriptLoader
 import javaposse.jobdsl.plugin.JenkinsJobManagement
 def seedJob = '''
 job('_create_2p_project') {
+    concurrentBuild(false)
     parameters {
         stringParam('name', '', 'Project Name')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
@@ -37,10 +38,10 @@ job('_create_2p_project') {
     }
     steps {
         dsl {
-          text("if(stagingPipeline) pipelineJob(name+'-staging') {triggers {scm('H/5 * * * *')}; definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(stagingPipeline)}}}; ")
+          text("if(stagingPipeline) pipelineJob(name+'-staging') { definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(stagingPipeline)}}}; ")
         }
         dsl {
-          text("if(prodPipeline) pipelineJob(name+'-prod') { definition { cpsScm { scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(prodPipeline)}}}; ")
+          text("if(prodPipeline) pipelineJob(name+'-production') { definition { cpsScm { scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(prodPipeline)}}}; ")
         }
     }
 }
@@ -50,6 +51,7 @@ def jobManagement = new JenkinsJobManagement(System.out, [:], workspace)
 new DslScriptLoader(jobManagement).runScript(seedJob)
 def seedJob2 = '''
 job('_create_1p_project') {
+    concurrentBuild(false)
     parameters {
         stringParam('name', '', 'Project Name')
         stringParam('gitUrl', 'https://github.com/myaccout/myrepo.git', 'Git/Bitbucket Repository URL')
@@ -58,7 +60,7 @@ job('_create_1p_project') {
     }
     steps {
         dsl {
-          text("if(pipeline) pipelineJob(name+'-pipeline') {triggers {scm('H/5 * * * *')}; definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(pipeline)}}}; ")
+          text("if(pipeline) pipelineJob(name+'-pipeline') {definition {cpsScm {scm {git {branch(branchToBuild);remote {url(gitUrl)}}}; scriptPath(pipeline)}}}; ")
         }
     }
 }

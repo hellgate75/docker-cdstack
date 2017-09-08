@@ -1,1 +1,1 @@
-https://hellgate75@bitbucket.org/digitalrigbitbucketteam/vanilla-recruitment.git|master
+git@bitbucket.org:hellgate75/rest-service.git|master

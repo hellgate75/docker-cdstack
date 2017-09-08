@@ -12,7 +12,7 @@ JENKINS_PLUGINS_URL="$1"
 JENKINS_PLUGINS_TGZ_URL="$2"
 
 function download_file() {
-  if [[ -z "$(echo $2|grep -i 'https://')" ]]; then
+  if ! [[ -z "$(echo $2|grep -i 'https://')" ]]; then
     curl -sSL -o $1 $2
     return "$?"
   else

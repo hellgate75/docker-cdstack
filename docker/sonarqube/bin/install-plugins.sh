@@ -6,7 +6,7 @@ ARCHIVES_FOLDER="$SONARQUBE_STAGING_FOLDER/archives"
 ARCHIVES_BUILD_FOLDER="$SONARQUBE_STAGING_FOLDER/workspaces"
 
 function download_file() {
-  if [[ -z "$(echo $2|grep -i 'https://')" ]]; then
+  if ! [[ -z "$(echo $2|grep -i 'https://')" ]]; then
     curl -L -o $1 $2
     return "$?"
   else
