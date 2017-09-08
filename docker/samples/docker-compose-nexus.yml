@@ -1,0 +1,59 @@
+version: "2"
+
+services:
+  nexus3_volumes:
+    build:
+      context: ../nexus3
+      dockerfile: Dockerfile
+    image: hellgate75/nexus-cdstack
+    container_name: nexus-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "nexus3_data:/nexus-data"
+  nexus3:
+    build:
+      context: ../nexus3
+      dockerfile: Dockerfile
+    image: hellgate75/nexus-cdstack
+    container_name: nexus-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: nexus
+    environment:
+      - "JVM_MAX_MEM=2G"
+      - "JVM_MAX_HEAP=2G"
+      - "JVM_MIN_HEAP=256m"
+    ports:
+      - 8085:8081
+      - 2480:2480
+      - 18999:18999
+      - 19000:19000
+    volumes_from:
+      - nexus3_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    networks:
+      samples_pipeline-private-network:
+        aliases:
+          - nexus.cdnet
+          - nexus
+      samples_pipeline-network:
+        aliases:
+          - nexus.cdnet
+          - nexus
+networks:
+  samples_pipeline-private-network:
+    external: true
+    #this should be attached from swarm node network or jenkins stack
+  samples_pipeline-network:
+    external: true
+    #this should be attached from swarm node network or jenkins stack
+volumes:
+  nexus3_data:

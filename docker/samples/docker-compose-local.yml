@@ -1,0 +1,224 @@
+version: "2"
+
+services:
+  sonarqube_db_volumes:
+    image: mysql:5.7
+    container_name: sonardb-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "sonarqube_db_data:/var/lib/mysql"
+  sonarqube_db:
+    image: mysql:5.7
+    container_name: sonardb-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: sonadb
+    environment:
+      - "MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}"
+      - "MYSQL_DATABASE=sonarqube"
+      - "MYSQL_USER=sonar"
+      - "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+    ports:
+       - "6603:3306"
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    volumes_from:
+      - sonarqube_db_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    networks:
+      pipeline-db-network:
+        aliases:
+          - sonardb.cdnet
+          - sonardb
+  sonarqube_volumes:
+    build:
+      context: ../sonarqube
+      dockerfile: Dockerfile
+    image: hellgate75/sonarqube-cdstack
+    container_name: sonarqube-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "sonarqube_data:/opt/sonarqube/data"
+  sonarqube:
+    build:
+      context: ../sonarqube
+      dockerfile: Dockerfile
+    links:
+      - sonarqube_db:sonardb
+    image: hellgate75/sonarqube-cdstack
+    container_name: sonarqube-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: sonar
+    environment:
+      - "SONARQUBE_JDBC_USERNAME=sonar"
+      - "SONARQUBE_JDBC_PASSWORD=${MYSQL_PASSWORD}"
+      - "SONARQUBE_JDBC_URL=jdbc:mysql://sonardb:3306/sonarqube?useUnicode=true&characterEncoding=utf8&useSSL=false"
+      - "SONARQUBE_WEB_CONTEXT=/sonar"
+      - "STARTUP_TIMEOUT_SECONDS=60"
+      - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/sonarqube/sonarqube-plugins.txt"
+      - "SONARQUBE_REINSTALL_PLUGIN=1"
+    ports:
+      - 9000:9000
+      - 9001:9001
+      - 9092:9092
+    volumes_from:
+      - sonarqube_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-db-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+      pipeline-private-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+      pipeline-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+  nexus3_volumes:
+    build:
+      context: ../nexus3
+      dockerfile: Dockerfile
+    image: hellgate75/nexus-cdstack
+    container_name: nexus-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "nexus3_data:/nexus-data"
+  nexus3:
+    build:
+      context: ../nexus3
+      dockerfile: Dockerfile
+    image: hellgate75/nexus-cdstack
+    container_name: nexus-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: nexus
+    environment:
+      - "JVM_MAX_MEM=2G"
+      - "JVM_MAX_HEAP=2G"
+      - "JVM_MIN_HEAP=256m"
+    ports:
+      - 8085:8081
+      - 2480:2480
+      - 18999:18999
+      - 19000:19000
+    volumes_from:
+      - nexus3_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - nexus.cdnet
+          - nexus
+      pipeline-network:
+        aliases:
+          - nexus.cdnet
+          - nexus
+  jenkins_volumes:
+    build:
+      context: ../jenkins
+      dockerfile: Dockerfile
+    image: hellgate75/jenkins-cdstack
+    container_name: jenkins-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "jenkins_data:/var/jenkins_home"
+  jenkins:
+    build:
+      context: ../jenkins
+      dockerfile: Dockerfile
+    image: hellgate75/jenkins-cdstack
+    container_name: jenkins-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: jenkins
+    links:
+      - nexus3
+      - sonarqube
+    environment:
+      - "JAVA_MAX_HEAP=2G"
+      - "JAVA_MIN_HEAP=256m"
+      - "JENKINS_ADMIN_PASSWORD=${JENKINS_PASSOWORD}"
+      - "GIT_USER_NAME=hellgate75"
+      - "GIT_USER_EMAIL=hellgate75@gmail.com"
+      - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/jenkins-plugins.txt"
+      - "PROJECT_LIST_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
+      - "SONARQUBE_URL=http://sonar.cdnet:9000/sonar"
+      - "SONARQUBE_APIKEY=${SONAR_APIKEY}"
+      - "SONARQUBE_USER=sonar"
+      - "SONARQUBE_PASSWORD=${SONAR_PASSWORD}"
+      - "NEXUS_BASE_URL=http://nexus.cdnet:8081/"
+      - "NEXUS_SNAPSHOT_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-snapshot"
+      - "NEXUS_RELEASE_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-release"
+      - "NEXUS_STAGING_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-staging-docker"
+      - "NEXUS_PRODUCTION_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-production-docker"
+      - "NEXUS_USER=admin"
+      - "NEXUS_PASSWORD=${NEXUS_PASSWORD}"
+    ports:
+      - 8080:8080
+      - 50000:50000
+    volumes_from:
+      - jenkins_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - jenkins.cdnet
+          - jenkins
+      pipeline-network:
+        aliases:
+          - jenkins.cdnet
+          - jenkins
+networks:
+  pipeline-db-network:
+    driver: bridge
+    internal: true
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 172.20.0.0/16
+    #     - gateway: 172.20.0.1
+  pipeline-private-network:
+    driver: bridge
+    internal: true
+    #this should be an overlay network of a swarm cluster
+  pipeline-network:
+    #this should be an overlay network of a swarm cluster
+volumes:
+  sonarqube_db_data:
+  sonarqube_data:
+  nexus3_data:
+  jenkins_data:

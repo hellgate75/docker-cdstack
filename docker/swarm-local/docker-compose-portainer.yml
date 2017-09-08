@@ -1,0 +1,57 @@
+version: "3"
+
+services:
+  portainer-app:
+    image: portainer/portainer
+    entrypoint: ["/portainer", "--admin-password", "$$2y$$05$$i0DUPkvUGbinoalDecTrSeNdv.NerjymDsvPjUnaer3W71NN65B1G"]
+    hostname: portainer
+    ports:
+      - 9091:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - "portainer_data:/data"
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - portainer.cdnet
+          - portainer
+      pipeline-network:
+        aliases:
+          - portainer.cdnet
+          - portainer
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 500M
+        reservations:
+          cpus: '0.2'
+          memory: 300M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - vanilla.machine.name=leader
+        - vanilla.machine.type=leader
+        - vanilla.machine.visibility=public
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.projectnodename == leader
+networks:
+  pipeline-private-network:
+    driver: overlay
+    internal: true
+  pipeline-network:
+    driver: overlay
+    # ipam:
+    #   subnet: 10.255.1.0/16
+    #   gateway: 10.255.1.1
+volumes:
+  portainer_data:

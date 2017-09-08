@@ -1,0 +1,11 @@
+install|https://sonarsource.bintray.com/Distribution/sonar-java-plugin/sonar-java-plugin-4.12.0.11033.jar
+install|https://sonarsource.bintray.com/Distribution/sonar-javascript-plugin/sonar-javascript-plugin-3.1.1.5128.jar
+install|https://github.com/QualInsight/qualinsight-plugins-sonarqube-smell/releases/download/qualinsight-plugins-sonarqube-smell-4.0.0/qualinsight-sonarqube-smell-plugin-4.0.0.jar
+install|https://github.com/SonarQubeCommunity/sonar-auth-bitbucket/releases/download/1.0/sonar-auth-bitbucket-plugin-1.0.jar
+install|https://github.com/checkstyle/sonar-checkstyle/releases/download/3.7/checkstyle-sonar-plugin-3.7.jar
+install|https://github.com/SonarQubeCommunity/sonar-findbugs/releases/download/3.5.0/sonar-findbugs-plugin.jar
+install|https://github.com/SonarQubeCommunity/sonar-groovy/releases/download/1.5/sonar-groovy-plugin-1.5.jar
+install|https://github.com/QualInsight/qualinsight-plugins-sonarqube-badges/releases/download/qualinsight-plugins-sonarqube-badges-3.0.1/qualinsight-sonarqube-badges-3.0.1.jar
+install|https://github.com/SonarQubeCommunity/sonar-css/releases/download/2.1/sonar-css-plugin-2.1.jar
+unzip+maven+sonar-maven-report-0.1|https://github.com/SonarQubeCommunity/sonar-maven-report/archive/0.1.zip
+unzip+maven+sonar-jira-1.2|https://github.com/SonarQubeCommunity/sonar-jira/archive/1.2.zip

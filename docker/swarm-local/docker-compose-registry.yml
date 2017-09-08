@@ -1,0 +1,61 @@
+version: "3"
+
+services:
+  docker-registry:
+    image: registry:2
+    hostname: docker-registry
+    environment:
+      - "REGISTRY_HTTP_ADDR=0.0.0.0:5000"
+      - "REGISTRY_HTTP_TLS_CERTIFICATE=/etc/docker/registry/domain.crt"
+      - "REGISTRY_HTTP_TLS_KEY=/etc/docker/registry/domain.key"
+    ports:
+      - 5000:5000
+    volumes:
+      - "registry_data:/var/lib/registry"
+      - "/sys/fs/cgroup:/sys/fs/cgroup"
+      - "/home/docker/registry/config.yml:/etc/docker/registry/config.yml"
+      - "/home/docker/registry/htpasswd:/etc/docker/registry/htpasswd"
+      - "/home/docker/registry/domain.crt:/etc/docker/registry/domain.crt"
+      - "/home/docker/registry/domain.key:/etc/docker/registry/domain.key"
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - registry.cdnet
+          - registry
+      pipeline-network:
+        aliases:
+          - registry.cdnet
+          - registry
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 500M
+        reservations:
+          cpus: '0.2'
+          memory: 300M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - vanilla.machine.name=leader
+        - vanilla.machine.type=leader
+        - vanilla.machine.visibility=public
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.projectnodename == leader
+networks:
+  pipeline-private-network:
+    external:
+      name: CDSTACK_PROJECT_NAME-cdmainstack_pipeline-private-network
+  pipeline-network:
+    external:
+      name: CDSTACK_PROJECT_NAME-cdmainstack_pipeline-network
+volumes:
+  registry_data:

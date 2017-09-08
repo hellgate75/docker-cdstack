@@ -1,0 +1,112 @@
+version: "2"
+
+services:
+  sonarqube_db_volumes:
+    image: mysql:5.7
+    container_name: sonardb-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "sonarqube_db_data:/var/lib/mysql"
+  sonarqube_db:
+    image: mysql:5.7
+    container_name: sonardb-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: sonadb
+    environment:
+      - "MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}"
+      - "MYSQL_DATABASE=sonarqube"
+      - "MYSQL_USER=sonar"
+      - "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+    ports:
+       - "6603:3306"
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    volumes_from:
+      - sonarqube_db_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    networks:
+      pipeline-db-network:
+        aliases:
+          - sonardb.cdnet
+          - sonardb
+  sonarqube_volumes:
+    build:
+      context: ../sonarqube
+      dockerfile: Dockerfile
+    image: hellgate75/sonarqube-cdstack
+    container_name: sonarqube-cdstack-compose-volumes
+    entrypoint: ['/bin/bash', '-c']
+    command: ['echo "Sidekick ..." && echo 0']
+    volumes:
+      - "sonarqube_data:/opt/sonarqube/data"
+  sonarqube:
+    build:
+      context: ../sonarqube
+      dockerfile: Dockerfile
+    links:
+      - sonarqube_db:sonardb
+    image: hellgate75/sonarqube-cdstack
+    container_name: sonarqube-cdstack-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: sonar.cdnet
+    hostname: sonar
+    environment:
+      - "SONARQUBE_JDBC_USERNAME=sonar"
+      - "SONARQUBE_JDBC_PASSWORD=${MYSQL_PASSWORD}"
+      - "SONARQUBE_JDBC_URL=jdbc:mysql://sonardb:3306/sonarqube?useUnicode=true&characterEncoding=utf8&useSSL=false"
+      - "SONARQUBE_WEB_CONTEXT=/sonar"
+      - "STARTUP_TIMEOUT_SECONDS=60"
+      - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/sonarqube/sonarqube-plugins.txt"
+      - "SONARQUBE_REINSTALL_PLUGIN=1"
+    ports:
+      - 9000:9000
+      - 9001:9001
+      - 9092:9092
+    volumes_from:
+      - sonarqube_volumes
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    cap_add:
+      - IPC_LOCK
+      - SYS_ADMIN
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-db-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+      samples_pipeline-private-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+      samples_pipeline-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+networks:
+  pipeline-db-network:
+    driver: bridge
+    internal: true
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 172.20.0.0/16
+    #     - gateway: 172.20.0.1
+  samples_pipeline-private-network:
+    external: true
+    #this should be attached from swarm node network or jenkins stack
+  samples_pipeline-network:
+    external: true
+    #this should be attached from swarm node network or jenkins stack
+volumes:
+  sonarqube_db_data:
+  sonarqube_data:

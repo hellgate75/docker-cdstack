@@ -1,0 +1,224 @@
+version: "3.3"
+
+services:
+  jenkins:
+    image: hellgate75/CDSTACK_PROJECT_NAME-jenkins:latest
+    hostname: jenkins
+    environment:
+      - "JAVA_MAX_HEAP=2G"
+      - "JAVA_MIN_HEAP=256m"
+      - "JENKINS_ADMIN_PASSWORD=4n4lys1s"
+      - "GIT_USER_NAME=hellgate75"
+      - "GIT_USER_EMAIL=hellgate75@gmail.com"
+      - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/jenkins-plugins.txt"
+      - "PROJECT_LIST_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
+      - "SONARQUBE_URL=http://sonar.cdnet:9000/sonar"
+      - "SONARQUBE_APIKEY=3fa196d418de0d12d4f0c6996251c3a11ab5f9786c9d2072d1b82c1bd3455b06"
+      - "SONARQUBE_USER=sonar"
+      - "SONARQUBE_PASSWORD=sonar"
+      - "NEXUS_BASE_URL=http://nexus.cdnet:8081/"
+      - "NEXUS_SNAPSHOT_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-snapshot"
+      - "NEXUS_RELEASE_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-release"
+      - "NEXUS_STAGING_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-staging-docker"
+      - "NEXUS_PRODUCTION_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-production-docker"
+      - "NEXUS_USER=admin"
+      - "NEXUS_PASSWORD=admin123"
+    ports:
+      - 8080:8080
+      - 50000:50000
+    volumes:
+      - "jenkins_data:/var/jenkins_home"
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - jenkins.cdnet
+          - jenkins
+      pipeline-network:
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.9'
+          memory: 1536M
+        reservations:
+          cpus: '0.4'
+          memory: 900M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - cdstack.machine.name=jenkins
+        - cdstack.machine.type=manager
+        - cdstack.machine.visibility=public
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.projectnodename == jenkins
+  nexus3:
+    image: hellgate75/CDSTACK_PROJECT_NAME-nexus:latest
+    hostname: nexus
+    environment:
+      - "JVM_MAX_MEM=2560m"
+      - "JVM_MAX_HEAP=2G"
+      - "JVM_MIN_HEAP=256m"
+    ports:
+      - 8085:8081
+      - 2480:2480
+      - 18999:18999
+      - 19000:19000
+    volumes:
+      - "nexus3_data:/nexus-data"
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - nexus.cdnet
+          - nexus
+      pipeline-network:
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.9'
+          memory: 1536M
+        reservations:
+          cpus: '0.4'
+          memory: 300M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - cdstack.machine.name=nexus3
+        - cdstack.machine.type=manager
+        - cdstack.machine.visibility=public
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.projectnodename == nexus3
+  sonarqube_db:
+    image: mysql:5.7
+    hostname: sonadb
+    environment:
+      - "MYSQL_ROOT_PASSWORD=4n4lys1s"
+      - "MYSQL_DATABASE=sonarqube"
+      - "MYSQL_USER=sonar"
+      - "MYSQL_PASSWORD=4n4lys1s"
+    ports:
+       - "6603:3306"
+    ulimits:
+      memlock: -1
+    volumes:
+      - "sonarqube_db_data:/var/lib/mysql"
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    networks:
+      pipeline-private-network:
+        aliases:
+          - sonardb.cdnet
+          - sonardb
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 750M
+        reservations:
+          cpus: '0.4'
+          memory: 300M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - cdstack.machine.name=sonarqube-db
+        - cdstack.machine.type=manager
+        - cdstack.machine.visibility=private
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.projectnodename == sonarqube
+  sonarqube:
+    image: hellgate75/CDSTACK_PROJECT_NAME-sonarqube:latest
+    hostname: sonar
+    environment:
+      - "SONARQUBE_JDBC_USERNAME=sonar"
+      - "SONARQUBE_JDBC_PASSWORD=4n4lys1s"
+      - "SONARQUBE_JDBC_URL=jdbc:mysql://sonardb:3306/sonarqube?useUnicode=true&characterEncoding=utf8&useSSL=false&useConfigs=maxPerformance"
+      - "SONARQUBE_WEB_CONTEXT=/sonar"
+      - "STARTUP_TIMEOUT_SECONDS=120"
+      - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/sonarqube/sonarqube-plugins.txt"
+      - "SONARQUBE_REINSTALL_PLUGIN=1"
+    ports:
+      - 9000:9000
+      - 9001:9001
+      - 9092:9092
+    volumes:
+      - "sonarqube_data:/opt/sonarqube/data"
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - sonar.cdnet
+          - sonar
+      pipeline-network:
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 1536M
+        reservations:
+          cpus: '0.4'
+          memory: 300M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - cdstack.machine.name=sonarqube-app
+        - cdstack.machine.type=manager
+        - cdstack.machine.visibility=public
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.projectnodename == sonarqube
+networks:
+  pipeline-private-network:
+    external:
+      name: CDSTACK_PROJECT_NAME-cdmainstack_pipeline-private-network
+  pipeline-network:
+    external:
+      name: CDSTACK_PROJECT_NAME-cdmainstack_pipeline-network
+    # driver: overlay
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 172.120.0.0/16
+        # - gateway: 10.255.1.1
+  # pipeline-db-network:
+  #   internal: true
+volumes:
+  jenkins_data:
+    external:
+      name: samples_jenkins_data
+  nexus3_data:
+    external:
+      name: samples_nexus3_data
+  sonarqube_db_data:
+    external:
+      name: samples_sonarqube_db_data
+  sonarqube_data:
+    external:
+      name: samples_sonarqube_data

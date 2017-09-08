@@ -1,0 +1,29 @@
+Java :
+  - Maven :
+      mvn sonar:sonar \
+        -Dsonar.host.url=http://sonar.cdnet:9000/sonar \
+        -Dsonar.login=be363871002a870e8753d50d678a4b7bf236c92c
+  - Gradle :
+      - In Gradle file
+        plugins {
+          id "org.sonarqube" version "2.5"
+        }
+      - Command :
+        ./gradlew sonarqube \
+          -Dsonar.host.url=http://sonar.cdnet:9000/sonar \
+          -Dsonar.login=be363871002a870e8753d50d678a4b7bf236c92c
+
+Javascript :
+  - Linux :
+      sonar-scanner \
+        -Dsonar.projectKey=vanilla-frontend \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=http://sonar.cdnet:9000/sonar \
+        -Dsonar.login=be363871002a870e8753d50d678a4b7bf236c92c
+
+  - Windows :
+      sonar-scanner.bat \
+        -Dsonar.projectKey=vanilla-frontend \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=http://sonar.cdnet:9000/sonar \
+        -Dsonar.login=be363871002a870e8753d50d678a4b7bf236c92c

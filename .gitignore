@@ -1,0 +1,5 @@
+**/*.tar
+**/archives
+**/docker-images
+**/tmp
+**/*.tar
