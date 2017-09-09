@@ -60,6 +60,7 @@ elif [[ "--start" == "$1" ]]; then
 
       echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
 
+      echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
       ## Copying swarm stack source folder ...
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
@@ -69,7 +70,7 @@ elif [[ "--start" == "$1" ]]; then
        echo "$(copySourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "$DOCKER_FOLDER_PATH")"
     else
       LEADER_IP="$(docker-machine ip $PROJECT_PREFIX-leader$SUFFIX)"
-      echo "WARNING : Leader Swardocker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"m cluster node is running yet. Nothing to do!!"
+      echo "WARNING : Leader Swarm cluster node is running yet. Nothing to do!!"
     fi
   else
     echo "ERROR : Leader Swarm cluster node doesn't exists please destroy and recreate Swarm Cluster!!"
@@ -236,12 +237,16 @@ elif [[ "--create" == "$1" ]]; then
 
     sleep 5
 
+    echo "Adding Swarm Node Label to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
     ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=leader $PROJECT_PREFIX-leader$SUFFIX"
 
+    echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
+    ## Copying swarm stack source folder ...
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
+
     ## create swarm folder on leader Swarm Cluster docker-machine, pull portainer.io docker image from Docker Hub librraries, and deploy portainer stack on Swarm Cluster (only on leader node)
     echo "Creating Portainer.IO on Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull portainer/portainer"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker deploy -c ./swarm/docker-compose-portainer.yml --resolve-image \"always\" --prune $PROJECT_PREFIX-cdmainstack"
     echo "Provisioning Swarm Master : $PROJECT_PREFIX-leader ..."
@@ -269,13 +274,17 @@ elif [[ "--create" == "$1" ]]; then
 
 
     AUTHORIZATION_TOKEN="$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}' http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')"
+    echo "Setup default endpoint for Portnair.IO ..."
     ## Configure main profile endpoint on local machine host.
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"leader$SUFFIX\\\",\\\"URL\\\":\\\"unix:\\\/\\\/\\\/var\\\/run\\\/docker.sock\\\",\\\"TLS\\\":false}\" http://$LEADER_IP:9091/api/endpoints"
+    echo "Setup default docker registry for Portnair.IO ..."
     ## Configure local docker registry on Portainer.IO using authorised POST call
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"local\\\",\\\"URL\\\":\\\"$LEADER_IP:5000\\\",\\\"Authentication\\\":true,\\\"Username\\\":\\\"admin\\\",\\\"Password\\\":\\\"admin\\\"}\" http://$LEADER_IP:9091/api/registries"
+    echo "Setup standard user : $PORTAINER_STD_USER_NAME for Portnair.IO ..."
     ## Definition of standard user (role: 2), in case of definition of administrator role value must be 1
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"username\\\":\\\"$PORTAINER_STD_USER_NAME\\\",\\\"password\\\":\\\"$PORTAINER_STD_USER_NAME\\\",\\\"role\\\":2}\" http://$LEADER_IP:9091/api/users"
     ## Changing admin password
+    echo "Change admin password : $PORTAINER_ADMIN_PASSWORD for Portnair.IO ..."
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X PUT -d \"{\\\"password\\\":\\\"$PORTAINER_ADMIN_PASSWORD\\\"}\" http://$LEADER_IP:9091/api/users/1"
   else
     LEADER_IP="$(docker-machine ip $PROJECT_PREFIX-leader$SUFFIX)"
@@ -314,6 +323,7 @@ elif [[ "--create" == "$1" ]]; then
 
     sleep 5
 
+    echo "Adding Swarm Node Label to $PROJECT_PREFIX-jenkins$SUFFIX Swarm Worker Node ..."
     ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=jenkins $PROJECT_PREFIX-jenkins$SUFFIX"
 
@@ -350,9 +360,11 @@ elif [[ "--create" == "$1" ]]; then
 
     ## Check Nexus docker container volumes backup archive presence on disk and eventually download a new archive from Amazon S3
     if ! [[ -e ./archives/samples_nexus3_data.tgz  ]]; then
+      echo "Downloading Nexus3 volume backup from S3 ..."
       mkdir -p ./archives
       curl -L https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/volumes/samples_nexus3_data.tgz -o ./archives/samples_nexus3_data.tgz
     fi
+    echo "Importing Nexus3 volume backup in $PROJECT_PREFIX-nexus$SUFFIX docker-machine ..."
     ## Create Nexus archive remote folder, copy archive file on docker-machine and restore archive in a new volume, used by docker container
     docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "mkdir -p /var/lib/home/docker/swarm/archives"
     docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "cp /hosthome/archives/samples_nexus3_data.tgz /var/lib/home/docker/swarm/archives/samples_nexus3_data.tgz"
@@ -361,6 +373,7 @@ elif [[ "--create" == "$1" ]]; then
 
     sleep 5
 
+    echo "Adding Swarm Node Label to $PROJECT_PREFIX-nexus$SUFFIX Swarm Worker Node ..."
     ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=nexus3 $PROJECT_PREFIX-nexus$SUFFIX"
   else
@@ -398,26 +411,29 @@ elif [[ "--create" == "$1" ]]; then
 
     ## Check SonarQube and SonarQube Database docker container volumes backup archives presence on disk and eventually download new archives from Amazon S3
     if ! [[ -e ./archives/samples_sonarqube_data.tgz  ]]; then
+      echo "Downloading SonarQube volume backup from S3 ..."
       mkdir -p ./archives
       curl -L https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/volumes/samples_sonarqube_data.tgz -o ./archives/samples_sonarqube_data.tgz
     fi
     if ! [[ -e ./archives/samples_sonarqube_db_data.tgz  ]]; then
+      echo "Downloading SonarQube MySQL database volume backup from S3 ..."
       mkdir -p ./archives
       curl -L https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/volumes/samples_sonarqube_db_data.tgz -o ./archives/samples_sonarqube_db_data.tgz
     fi
+    echo "Importing SonarQube volume backup in $PROJECT_PREFIX-sonarqube$SUFFIX docker-machine ..."
     ## Create SonarQube and SonarQube archives remote folder, copy archive files on docker-machine and restore archives in new volumes, used by docker containers
     docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "mkdir -p /var/lib/home/docker/swarm/archives"
     docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "cp /hosthome/archives/samples_sonarqube_data.tgz /var/lib/home/docker/swarm/archives/samples_sonarqube_data.tgz"
-    docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "cp /hosthome/archives/samples_sonarqube_db_data.tgz /var/lib/home/docker/swarm/archives/samples_sonarqube_db_data.tgz"
-    # docker-machine scp ./archives/samples_sonarqube_data.tgz $PROJECT_PREFIX-sonarqube$SUFFIX:/var/lib/home/docker/swarm/archives/samples_sonarqube_data.tgz
-    # docker-machine scp ./archives/samples_sonarqube_db_data.tgz $PROJECT_PREFIX-sonarqube$SUFFIX:/var/lib/home/docker/swarm/archives/samples_sonarqube_db_data.tgz
     docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker volume create \"samples_sonarqube_data\" && docker run --rm -i -v \"samples_sonarqube_data:/volume\" -v \"/var/lib/home/docker/swarm/archives:/backup\" ubuntu:16.10 bash -c \"rm -Rf /volume/*; tar -xzf /backup/samples_sonarqube_data.tgz -C /volume\""
     sleep 20
+    echo "Importing SonarQube MySQL database volume backup in $PROJECT_PREFIX-sonarqube$SUFFIX docker-machine ..."
+    docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "cp /hosthome/archives/samples_sonarqube_db_data.tgz /var/lib/home/docker/swarm/archives/samples_sonarqube_db_data.tgz"
     docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker volume create \"samples_sonarqube_db_data\" && docker run --rm -i -v \"samples_sonarqube_db_data:/volume\" -v \"/var/lib/home/docker/swarm/archives:/backup\" ubuntu:16.10 bash -c \"rm -Rf /volume/*; tar -xzf /backup/samples_sonarqube_db_data.tgz -C /volume\""
 
 
     sleep 5
 
+    echo "Adding Swarm Node Label to $PROJECT_PREFIX-sonarqube$SUFFIX Swarm Worker Node ..."
     ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=sonarqube $PROJECT_PREFIX-sonarqube$SUFFIX"
   else
@@ -874,7 +890,7 @@ elif [[ "--redeploy" == "$1" ]]; then
     fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker rmi -f hellgate75/$PROJECT_PREFIX-nexus"
     ## connect to sonarqube worker docker-machine, and pull mysql docker image from docker hub libraries (faster stack creation)
-      echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
+    echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull mysql:5.7"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker tag mysql:5.7 $LEADER_IP:5000/hellgate75/mysql:5.7"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/mysql:5.7"
@@ -948,6 +964,7 @@ elif [[ "--redeploy" == "$1" ]]; then
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube && docker rmi -f hellgate75/$PROJECT_PREFIX-sonarqube"
   fi
   if  [[ "1" == "$COPYYAML_FLAG" ]]; then
+    echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
     ## Copying swarm script source folder for docker stack rebuild ...
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
     ## Fill in Continuous Delivery deployment stack docker registry reference for worker local docker push
