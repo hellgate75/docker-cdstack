@@ -270,6 +270,7 @@ elif [[ "--create" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
 
     ## Configure local docker registry on Portainer.IO using authorised POST call
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}'\" http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"leader$SUFFIX\\\",\\\"URL\\\":\\\"unix:\\\/\\\/\\\/var\\\/run\\\/docker.sock\\\",\\\"TLS\\\":false}\" http://$LEADER_IP:9091/api/endpoints"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}'\" http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"local\\\",\\\"URL\\\":\\\"$LEADER_IP:5000\\\",\\\"Authentication\\\":true,\\\"Username\\\":\\\"admin\\\",\\\"Password\\\":\\\"admin\\\"}\" http://$LEADER_IP:9091/api/registries"
 
   else
