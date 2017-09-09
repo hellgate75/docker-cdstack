@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source scripts/common-functions.sh
-
 ##########################################################################
 ## Execute Swarm Cluser operations with script parameters:              ##
 ##  - command (--create|--destory|--start|--stop|--redeploy)            ##
@@ -269,10 +267,16 @@ elif [[ "--create" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
 
-    ## Configure local docker registry on Portainer.IO using authorised POST call
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}'\" http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"leader$SUFFIX\\\",\\\"URL\\\":\\\"unix:\\\/\\\/\\\/var\\\/run\\\/docker.sock\\\",\\\"TLS\\\":false}\" http://$LEADER_IP:9091/api/endpoints"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}'\" http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"local\\\",\\\"URL\\\":\\\"$LEADER_IP:5000\\\",\\\"Authentication\\\":true,\\\"Username\\\":\\\"admin\\\",\\\"Password\\\":\\\"admin\\\"}\" http://$LEADER_IP:9091/api/registries"
 
+    AUTHORIZATION_TOKEN="$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}' http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')"
+    ## Configure main profile endpoint on local machine host.
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"leader$SUFFIX\\\",\\\"URL\\\":\\\"unix:\\\/\\\/\\\/var\\\/run\\\/docker.sock\\\",\\\"TLS\\\":false}\" http://$LEADER_IP:9091/api/endpoints"
+    ## Configure local docker registry on Portainer.IO using authorised POST call
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"Name\\\":\\\"local\\\",\\\"URL\\\":\\\"$LEADER_IP:5000\\\",\\\"Authentication\\\":true,\\\"Username\\\":\\\"admin\\\",\\\"Password\\\":\\\"admin\\\"}\" http://$LEADER_IP:9091/api/registries"
+    ## Definition of standard user (role: 2), in case of definition of administrator role value must be 1
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X POST -d \"{\\\"username\\\":\\\"$PORTAINER_STD_USER_NAME\\\",\\\"password\\\":\\\"$PORTAINER_STD_USER_NAME\\\",\\\"role\\\":2}\" http://$LEADER_IP:9091/api/users"
+    ## Changing admin password
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "export TOKEN=\"$AUTHORIZATION_TOKEN\" && curl -H \"Authorization: Bearer \$TOKEN\" -H 'Content-Type: application/json' -X PUT -d \"{\\\"password\\\":\\\"$PORTAINER_ADMIN_PASSWORD\\\"}\" http://$LEADER_IP:9091/api/users/1"
   else
     LEADER_IP="$(docker-machine ip $PROJECT_PREFIX-leader$SUFFIX)"
     ## Using fake user and password, just for web access .... Authentication is via X509 certificate

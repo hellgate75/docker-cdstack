@@ -1,6 +1,9 @@
 #!/bin/bash
 
 DOCKER_FOLDER_PATH="$(cd $(pwd)/../docker && pwd)"
+PORTAINER_ADMIN_PASSWORD="${SWARM_LOCAL_PORTAINER_ADMIN_PASSWORD:-"admin123"}"
+PORTAINER_STD_USER_NAME="${SWARM_LOCAL_PORTAINER_STD_USER_NAME:-"user"}"
+PORTAINER_STD_USER_PWD="${SWARM_LOCAL_PORTAINER_STD_USER_PWD:-"user123"}"
 
 ##########################################################################
 ## Define project name and prject prefix                                ##
@@ -107,7 +110,7 @@ function checkSuffix() {
 ##########################################################################
 function advertise() {
   echo "You can access Portainer console at : http://$2:9091/"
-  echo "Login to console with user 'admin' and password 'admin123', then manage your Swarm Cluster!!"
+  echo "Login to console with user 'admin' and password '$PORTAINER_ADMIN_PASSWORD', then manage your Swarm Cluster!!"
   echo ""
   echo "Jenkis console at : http://$2:8080/"
   echo "Nexus 3 OSS console at : http://$2:8085/"
