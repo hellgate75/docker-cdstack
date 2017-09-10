@@ -3,3 +3,6 @@
 **/docker-images
 **/tmp
 **/*.tar
+**/build.sh
+**/run.sh
+**/access.sh

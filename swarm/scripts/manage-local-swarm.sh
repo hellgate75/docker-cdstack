@@ -58,11 +58,11 @@ elif [[ "--start" == "$1" ]]; then
 
       remountDockerLibHomeSolidVolume "$PROJECT_PREFIX-leader$SUFFIX"
 
-      echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
+      echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
 
       echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
       ## Copying swarm stack source folder ...
-      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
@@ -92,7 +92,7 @@ elif [[ "--start" == "$1" ]]; then
 
       remountDockerLibHomeSolidVolume "$PROJECT_PREFIX-jenkins$SUFFIX"
 
-      echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-jenkins$SUFFIX" "$LEADER_IP")"
+      echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-jenkins$SUFFIX" "$LEADER_IP")"
       RESTARTED_JENKINS="1"
     else
       echo "WARNING : Jenkins Swarm cluster node is running yet. Nothing to do!!"
@@ -117,7 +117,7 @@ elif [[ "--start" == "$1" ]]; then
 
       remountDockerLibHomeSolidVolume "$PROJECT_PREFIX-nexus$SUFFIX"
 
-      echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-nexus$SUFFIX" "$LEADER_IP")"
+      echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-nexus$SUFFIX" "$LEADER_IP")"
       RESTARTED_NEXUS="1"
     else
       echo "WARNING : Nexus 3 OSS Swarm cluster node is running yet. Nothing to do!!"
@@ -142,7 +142,7 @@ elif [[ "--start" == "$1" ]]; then
 
       remountDockerLibHomeSolidVolume "$PROJECT_PREFIX-sonarqube$SUFFIX"
 
-      echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-sonarqube$SUFFIX" "$LEADER_IP")"
+      echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-sonarqube$SUFFIX" "$LEADER_IP")"
       RESTARTED_SONAR="1"
     else
       echo "WARNING : SonarQube Swarm cluster node is running yet. Nothing to do!!"
@@ -178,6 +178,9 @@ elif [[ "--create" == "$1" ]]; then
   LEADER_MEMORY="${SWARM_LOCAL_LEADER_MEMORY:-"1024"}" #1 GB
   LEADER_DISK="${SWARM_LOCAL_LEADER_DISK:-"50000"}" #50 GB
   LEADER_CUPS="${SWARM_LOCAL_LEADER_CUPS:-"1"}"
+  JENKINS_AGENTS_MEMORY="${SWARM_ADVANCED_JENKINS_AGENTS_MEMORY:-"1024"}" #1 GB
+  JENKINS_AGENTS_DISK="${SWARM_ADVANCED_JENKINS_AGENTS_DISK:-"30000"}" #50 GB
+  JENKINS_AGENTS_CUPS="${SWARM_ADVANCED_JENKINS_AGENTS_CUPS:-"1"}"
   JENKINS_MEMORY="${SWARM_LOCAL_JENKINS_MEMORYS:-"1024"}" #1 GB
   JENKINS_DISK="${SWARM_LOCAL_JENKINS_DISK:-"30000"}" #30 GB
   JENKINS_CUPS="${SWARM_LOCAL_JENKINS_CUPS:-"1"}"
@@ -219,21 +222,21 @@ elif [[ "--create" == "$1" ]]; then
 
     sleep 5
     NEED_CERTIFICATE="1"
-    if [[ -e $(pwd)/swarm-local/.certificate-ip && "$LEADER_IP" == "$(cat $(pwd)/swarm-local/.certificate-ip)" ]]; then
+    if [[ -e $(pwd)/swarm-$ENVIRONMENT/.certificate-ip && "$LEADER_IP" == "$(cat $(pwd)/swarm-$ENVIRONMENT/.certificate-ip)" ]]; then
       NEED_CERTIFICATE="0"
     fi
     if [[ "1" == "$NEED_CERTIFICATE" ]]; then
       ## Rebuild SSL certificates for docker-registry
       echo "Now rebuild certificates for docker registry. Please use as FQDN, the leader ip address : \"$LEADER_IP\""
-      bash -c "cd $(pwd)/swarm-local && $(pwd)/swarm-local/make-certificate.sh"
-      echo "$LEADER_IP" > $(pwd)/swarm-local/.certificate-ip
+      bash -c "cd $(pwd)/swarm-$ENVIRONMENT && $(pwd)/swarm-$ENVIRONMENT/make-certificate.sh"
+      echo "$LEADER_IP" > $(pwd)/swarm-$ENVIRONMENT/.certificate-ip
       wait
     else
       ## Rebuild SSL certificates for docker-registry
       echo "Valid certificate found for leader on ip address : \"$LEADER_IP\""
     fi
 
-    echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
+    echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
 
     sleep 5
 
@@ -243,7 +246,7 @@ elif [[ "--create" == "$1" ]]; then
 
     echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
     ## Copying swarm stack source folder ...
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
 
     ## create swarm folder on leader Swarm Cluster docker-machine, pull portainer.io docker image from Docker Hub librraries, and deploy portainer stack on Swarm Cluster (only on leader node)
     echo "Creating Portainer.IO on Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
@@ -255,10 +258,10 @@ elif [[ "--create" == "$1" ]]; then
 
     ## create docker registry folder on leader Swarm Cluster docker-machine, copy all configuration and security file in that folder, pull docker registy v2 docker image from Docker Hub librraries, and deploy docker registry stack on Swarm Cluster (only on leader node)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "mkdir -p /home/docker/registry"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-local/registry.yml /home/docker/registry/config.yml"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-local/htpasswd /home/docker/registry/htpasswd"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-local/domain.crt /home/docker/registry/domain.crt"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-local/domain.key /home/docker/registry/domain.key"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-$ENVIRONMENT/registry.yml /home/docker/registry/config.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-$ENVIRONMENT/htpasswd /home/docker/registry/htpasswd"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-$ENVIRONMENT/domain.crt /home/docker/registry/domain.crt"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp /hosthome/swarm-$ENVIRONMENT/domain.key /home/docker/registry/domain.key"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull registry:2"
 
     ## Deploy rehistry stack
@@ -319,7 +322,7 @@ elif [[ "--create" == "$1" ]]; then
 
     PROVISION_JENKINS="1"
 
-    echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-jenkins$SUFFIX" "$LEADER_IP")"
+    echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-jenkins$SUFFIX" "$LEADER_IP")"
 
     sleep 5
 
@@ -354,7 +357,7 @@ elif [[ "--create" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "eval $TOKEN_COMMAND"
     PROVISION_NEXUS="1"
 
-    echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-nexus$SUFFIX" "$LEADER_IP")"
+    echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-nexus$SUFFIX" "$LEADER_IP")"
 
     sleep 5
 
@@ -404,7 +407,7 @@ elif [[ "--create" == "$1" ]]; then
     docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "eval $TOKEN_COMMAND"
     PROVISION_SONAR="1"
 
-    echo "$(installLocalCertificates "/hosthome/swarm-local"  "$PROJECT_PREFIX-sonarqube$SUFFIX" "$LEADER_IP")"
+    echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-sonarqube$SUFFIX" "$LEADER_IP")"
 
 
     sleep 5
@@ -966,7 +969,7 @@ elif [[ "--redeploy" == "$1" ]]; then
   if  [[ "1" == "$COPYYAML_FLAG" ]]; then
     echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
     ## Copying swarm script source folder for docker stack rebuild ...
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-local /home/docker/swarm"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
     ## Fill in Continuous Delivery deployment stack docker registry reference for worker local docker push
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
