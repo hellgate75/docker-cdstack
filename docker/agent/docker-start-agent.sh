@@ -25,11 +25,11 @@ chmod 600 $JENKINS_HOME/.ssh/id_rsa
 cat $JENKINS_HOME/.ssh/id_rsa.pub > $JENKINS_HOME/.ssh/authorized_keys
 
 
-if [[ -z "$(sudo service docker status | grep -v "not")" ]]; then
+if [[ -z "$(ps -eaf|grep dockerd|grep -v grep)" ]]; then
   sudo rm -f /var/run/docker*.pid
   sudo chmod 666 /var/run/docker.sock
-  # sudo service docker start
-  sudo wrapdocker
+  sudo service docker start
+  #sudo custom-start-docker
 else
   echo "Docker daemon is running"
 fi
@@ -85,6 +85,8 @@ echo "*************************************"
 echo ""
 
 if [[ "" != "$(echo "$@" | grep "\\$DAEMON_COMMAND")" ]]; then
+
+  tail -f /var/log/docker.log
   echo "Entering in sleep mode!!"
   tail -f /dev/null
 

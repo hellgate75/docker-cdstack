@@ -77,9 +77,11 @@ ADD docker-entrypoint.sh /docker-entrypoint.sh
 
 ADD bin/install-credentials.sh /usr/local/bin/install-credentials
 
-ADD bin/wrapdocker.sh /usr/local/bin/wrapdocker
+ADD bin/custom-start-docker.sh /usr/local/bin/custom-start-docker
 
-RUN chmod 777 /usr/local/bin/wrapdocker
+ADD bin/custom-stop-docker.sh /usr/local/bin/custom-stop-docker
+
+ADD files/docker /etc/init.d/docker
 
 RUN useradd -m -d $JENKINS_HOME -s /bin/bash -p jenkins jenkins \
     && echo "Init jenkins super-user ..." \
@@ -93,14 +95,13 @@ RUN useradd -m -d $JENKINS_HOME -s /bin/bash -p jenkins jenkins \
     && rm -f /usr/bin/python \
     && ln -s /usr/bin/python3 /usr/bin/python \
     && chmod 777 /docker* \
+    && chmod 777 /etc/init.d/docker \
     && chmod 777 /usr/local/bin/* \
     && mkdir -p $GOPATH \
     && chown jenkins:jenkins $GOPATH \
     && mkdir -p /etc/docker \
     && mkdir -p /vr/lib/docker \
-    && chmod -Rf 666 /etc/docker \
-    && echo -e "{\n\"experimental\": true\n}" > /etc/docker/daemon.json \
-    && chmod 666 /etc/docker/daemon.json
+    && chmod -Rf 666 /etc/docker
 USER jenkins
 
 WORKDIR $JENKINS_HOME
