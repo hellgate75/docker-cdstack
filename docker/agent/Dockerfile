@@ -26,7 +26,7 @@ RUN apt-get update \
     && apt-get --no-install-recommends --allow-unauthenticated  install -qqy vim curl wget \
                                    unzip python python-pip python-setuptools python-software-properties python3 python3-pip locales \
                                    python3-setuptools python3-software-properties software-properties-common groovy net-tools \
-                                   build-essential python-software-properties openssh-server openssl sudo maven gradle ruby-full \
+                                   build-essential python-software-properties openssh-server openssl sudo maven ruby-full \
                                    ca-certificates lxc iptables \
     && pip install --upgrade pip \
     && pip3 install --upgrade pip \
@@ -110,7 +110,7 @@ COPY files/jenkins-ssh.tgz $JENKINS_HOME/jenkins-ssh.tgz
 
 EXPOSE 22
 
-VOLUME ["/var/lib/docker", "/home/jenkins/.gradle", "/home/jenkins/.m2"]
+VOLUME ["/var/lib/docker", "/home/jenkins/.m2"]
 
 CMD /docker-start-agent.sh -daemon
 

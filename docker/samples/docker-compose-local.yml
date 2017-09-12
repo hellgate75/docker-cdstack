@@ -139,6 +139,62 @@ services:
         aliases:
           - nexus.cdnet
           - nexus
+  jenkins-agent-1:
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
+    image: hellgate75/jenkins-agent-cdstack
+    container_name: linux-agent-1-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: linux-agent-1
+    environment:
+      - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+    volumes:
+      - "jenkins_agent_1_data:/var/lib/docker"
+      - "jenkins_agent_1_mvn_data:/home/jenkins/.m2"
+    ports:
+      - "4223:22"
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - linux-agent-1.cdnet
+          - linux-agent-1
+      pipeline-network:
+        aliases:
+          - linux-agent-1.cdnet
+          - linux-agent-1
+  jenkins-agent-2:
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
+    image: hellgate75/jenkins-agent-cdstack
+    container_name: linux-agent-2-compose
+    privileged: true
+    restart: unless-stopped
+    domainname: cdnet
+    hostname: linux-agent-2
+    environment:
+      - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+    volumes:
+      - "jenkins_agent_2_data:/var/lib/docker"
+      - "jenkins_agent_2_mvn_data:/home/jenkins/.m2"
+    ports:
+      - "4224:22"
+    ulimits:
+      memlock: -1
+    networks:
+      pipeline-private-network:
+        aliases:
+          - linux-agent-2.cdnet
+          - linux-agent-2
+      pipeline-network:
+        aliases:
+          - linux-agent-2.cdnet
+          - linux-agent-2
   jenkins_volumes:
     build:
       context: ../jenkins
@@ -223,3 +279,7 @@ volumes:
   sonarqube_data:
   nexus3_data:
   jenkins_data:
+  jenkins_agent_1_data:
+  jenkins_agent_1_mvn_data:
+  jenkins_agent_2_data:
+  jenkins_agent_2_mvn_data:

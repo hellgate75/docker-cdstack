@@ -27,8 +27,8 @@ cat $JENKINS_HOME/.ssh/id_rsa.pub > $JENKINS_HOME/.ssh/authorized_keys
 
 if [[ -z "$(ps -eaf|grep dockerd|grep -v grep)" ]]; then
   sudo rm -f /var/run/docker*.pid
-  sudo chmod 666 /var/run/docker.sock
   sudo service docker start
+  sudo chmod 666 /var/run/docker.sock
   #sudo custom-start-docker
 else
   echo "Docker daemon is running"
@@ -45,9 +45,6 @@ echo ""
 echo "*************************************"
 echo "Maven version :"
 echo "$(mvn --version)"
-echo "*************************************"
-echo "Gradle version :"
-echo "$(gradle --version)"
 echo "*************************************"
 echo "Java version :"
 echo "$(java -version)"
