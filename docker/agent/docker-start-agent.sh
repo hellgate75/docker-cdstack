@@ -24,6 +24,17 @@ install-credentials
 chmod 600 $JENKINS_HOME/.ssh/id_rsa
 cat $JENKINS_HOME/.ssh/id_rsa.pub > $JENKINS_HOME/.ssh/authorized_keys
 
+mkdir -p $JENKINS_HOME/.jenkins
+
+if ! [[ -e $JENKINS_HOME/.jenkins/git_cred ]]; then
+  if ! [[ -z "$GIT_USER_NAME" ]]; then
+    git config --global user.name "$GIT_USER_NAME"
+  fi
+  if ! [[ -z "$GIT_USER_EMAIL" ]]; then
+    git config --global user.email "$GIT_USER_EMAIL"
+  fi
+  touch $JENKINS_HOME/.jenkins/git_cred
+fi
 
 if [[ -z "$(ps -eaf|grep dockerd|grep -v grep)" ]]; then
   sudo rm -f /var/run/docker*.pid

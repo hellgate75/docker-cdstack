@@ -2,6 +2,8 @@ FROM ubuntu:16.10
 
 ENV JENKINS_HOME=/home/jenkins \
     SSH_KEY_FILES_TAR_GZ_URL="" \
+    GIT_USER_NAME="" \
+    GIT_USER_EMAIL="" \
     DEBIAN_FRONTEND=noninteractive \
     SCALA_HOME=/usr/local/share/scala \
     PATH=$PATH:/usr/local/share/scala/bin:/usr/local/bin:/usr/local/go/bin \
@@ -23,7 +25,7 @@ USER root
 WORKDIR /root
 
 RUN apt-get update \
-    && apt-get --no-install-recommends --allow-unauthenticated  install -qqy vim curl wget \
+    && apt-get --no-install-recommends --allow-unauthenticated  install -qqy vim curl wget git \
                                    unzip python python-pip python-setuptools python-software-properties python3 python3-pip locales \
                                    python3-setuptools python3-software-properties software-properties-common groovy net-tools \
                                    build-essential python-software-properties openssh-server openssl sudo maven ruby-full \
@@ -69,7 +71,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && echo "Refinement of sshd config file ..." \
     && sed -i "s/\#AuthorizedKeysFile/AuthorizedKeysFile/g" /etc/ssh/sshd_config \
-    && sed -i "s/\#UseLogin no/UseLogin yes/g" /etc/ssh/sshd_config
+    && sed -i "s/\#UseLogin no/UseLogin yes/g" /etc/ssh/sshd_config \
+    && sed -i "s/\#PasswordAuthentication/PasswordAuthentication/g" /etc/ssh/sshd_config
 
 ADD docker-start-agent.sh /docker-start-agent.sh
 
@@ -84,6 +87,7 @@ ADD bin/custom-stop-docker.sh /usr/local/bin/custom-stop-docker
 ADD files/docker /etc/init.d/docker
 
 RUN useradd -m -d $JENKINS_HOME -s /bin/bash -p jenkins jenkins \
+    && echo "jenkins\njenkins"|sudo passwd jenkins \
     && echo "Init jenkins super-user ..." \
     && cp /etc/sudoers /root/sudoers \
     && chmod 777 /root/sudoers \
@@ -100,7 +104,9 @@ RUN useradd -m -d $JENKINS_HOME -s /bin/bash -p jenkins jenkins \
     && mkdir -p $GOPATH \
     && chown jenkins:jenkins $GOPATH \
     && mkdir -p /etc/docker \
-    && mkdir -p /vr/lib/docker \
+    && mkdir -p /var/lib/docker \
+    && chown -Rf jenkins:jenkins /home \
+    && mkdir -p /home/jenkins/.m2 \
     && chmod -Rf 666 /etc/docker
 USER jenkins
 

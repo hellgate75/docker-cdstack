@@ -11,7 +11,7 @@ ENV JENKINS_BIN_HOME="/usr/share/jenkins" \
     JAVA_MAX_HEAP="2G" \
     JAVA_MIN_HEAP="256m" \
     JENKINS_ADMIN_PASSWORD="jenkins" \
-    NUMBER_OF_JENKINS_EXECUTORS="5" \
+    NUMBER_OF_JENKINS_EXECUTORS="2" \
     PLUGINS_FILE_URL="" \
     PLUGINS_CONFIG_FILES_TAR_GZ_URL="" \
     AGENT_ENVIRONMENT_BASH_SCRIPT_URL="" \
@@ -36,6 +36,15 @@ ENV JENKINS_BIN_HOME="/usr/share/jenkins" \
 USER root
 
 RUN mkdir -p $JENKINS_HOME/.jenkins
+
+RUN apt-get update \
+    && apt-get -y install apt-utils \
+    && apt-get -y install --no-install-recommends sudo openssl tar groovy unzip monit ca-certificates \
+                        openssh-server cron wget curl htop git maven gradle vim net-tools zip locales \
+    && apt-get -y upgrade \
+    && apt-get -y autoremove \
+    && apt-get -y clean \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
@@ -95,15 +104,7 @@ COPY files/settings.xml /usr/share/maven/conf/settings.xml.template
 
 COPY files/jenkins.CLI.xml $JENKINS_HOME/jenkins.CLI.xml
 
-RUN apt-get update \
-    && apt-get -y install apt-utils \
-    && apt-get -y install --no-install-recommends sudo openssl tar groovy unzip monit ca-certificates \
-                        openssh-server cron wget curl htop git maven gradle vim net-tools zip locales \
-    && apt-get -y upgrade \
-    && apt-get -y autoremove \
-    && apt-get -y clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && echo "Init jenkins super-user ..." && cp /etc/sudoers /root/sudoers \
+RUN  echo "Init jenkins super-user ..." && cp /etc/sudoers /root/sudoers \
     && chmod 777 /root/sudoers \
     && echo "jenkins  ALL=(ALL) NOPASSWD:ALL" >> /root/sudoers \
     && chmod 400 /root/sudoers \
@@ -112,7 +113,6 @@ RUN apt-get update \
     && chmod 777 /usr/local/bin/* \
     && mkdir -p /jenkins/projects \
     && touch /usr/share/maven/conf/logging
-
 
 USER jenkins
 

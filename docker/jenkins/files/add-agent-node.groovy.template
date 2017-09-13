@@ -8,25 +8,25 @@ import java.util.ArrayList;
 import hudson.slaves.EnvironmentVariablesNodeProperty.Entry;
 
   List<Entry> env = new ArrayList<Entry>();
-  env.add(new Entry("nexus","nexus_host"))
-  env.add(new Entry("registry","registry_host"))
-  env.add(new Entry("staging_proxy_service_gateway","st_service_gateway_host"))
-  env.add(new Entry("staging_proxy_front_gateway","st_front_gateway_host"))
-  env.add(new Entry("prod_proxy_service_gateway","prod_service_gateway_host"))
-  env.add(new Entry("prod_proxy_front_gateway","prod_front_gateway_host"))
-  env.add(new Entry("staging_service_node_prefix","staging_service_node_prefix"))
-  env.add(new Entry("prod_service_node_prefix","prod_service_node_prefix"))
-  env.add(new Entry("staging_service_node_interval","staging_service_node_interval"))
-  env.add(new Entry("prod_service_node_interval","prod_service_node_interval"))
-  env.add(new Entry("staging_front_node_prefix","staging_front_node_prefix"))
-  env.add(new Entry("prod_front_node_prefix","prod_front_node_prefix"))
-  env.add(new Entry("staging_front_node_interval","staging_front_node_interval"))
-  env.add(new Entry("prod_front_node_interval","prod_front_node_interval"))
+  env.add(new Entry("NEXUS_BASE_REPO_URL",System.getenv("NEXUS_BASE_REPO_URL")))
+  env.add(new Entry("NEXUS_SNAPSHOT_REPO_URL",System.getenv("NEXUS_SNAPSHOT_REPO_URL")))
+  env.add(new Entry("NEXUS_RELEASE_REPO_URL",System.getenv("NEXUS_RELEASE_REPO_URL")))
+  env.add(new Entry("NEXUS_STAGING_DOCKER_REPO_URL",System.getenv("NEXUS_STAGING_DOCKER_REPO_URL")))
+  env.add(new Entry("NEXUS_PRODUCTION_DOCKER_REPO_URL",System.getenv("NEXUS_PRODUCTION_DOCKER_REPO_URL")))
+  env.add(new Entry("NEXUS_USER",System.getenv("NEXUS_USER")))
+  env.add(new Entry("NEXUS_PASSWORD",System.getenv("NEXUS_PASSWORD")))
+  env.add(new Entry("GIT_USER_NAME",System.getenv("GIT_USER_NAME")))
+  env.add(new Entry("GIT_USER_EMAIL",System.getenv("GIT_USER_EMAIL")))
+  env.add(new Entry("SONARQUBE_URL",System.getenv("SONARQUBE_URL")))
+  env.add(new Entry("SONARQUBE_APIKEY",System.getenv("SONARQUBE_APIKEY")))
+  env.add(new Entry("SONARQUBE_USER",System.getenv("SONARQUBE_USER")))
+  env.add(new Entry("SONARQUBE_PASSWORD",System.getenv("SONARQUBE_PASSWORD")))
   EnvironmentVariablesNodeProperty envPro = new EnvironmentVariablesNodeProperty(env);
   Slave slave = new DumbSlave(
-                    "agent-node","Vanilla Agent Node agent_node_label",
+                    "agent-node-agent_node_label",
+                    "Lunix Jenkins Agent Node agent_node_label",
                     "/home/jenkins/jobs",
-                    "1",
+                    "num_executors",
                     Node.Mode.NORMAL,
                     "agent_node_label",
                     new SSHLauncher("agent_host",22,"agent_user","agent_password","","","","",""),

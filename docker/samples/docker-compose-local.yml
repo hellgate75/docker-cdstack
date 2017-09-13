@@ -151,6 +151,8 @@ services:
     hostname: linux-agent-1
     environment:
       - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+      - "GIT_USER_NAME=hellgate75"
+      - "GIT_USER_EMAIL=hellgate75@gmail.com"
     volumes:
       - "jenkins_agent_1_data:/var/lib/docker"
       - "jenkins_agent_1_mvn_data:/home/jenkins/.m2"
@@ -179,6 +181,8 @@ services:
     hostname: linux-agent-2
     environment:
       - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+      - "GIT_USER_NAME=hellgate75"
+      - "GIT_USER_EMAIL=hellgate75@gmail.com"
     volumes:
       - "jenkins_agent_2_data:/var/lib/docker"
       - "jenkins_agent_2_mvn_data:/home/jenkins/.m2"
@@ -219,7 +223,8 @@ services:
       - nexus3
       - sonarqube
     environment:
-      - "JAVA_MAX_HEAP=2G"
+       - "NUMBER_OF_JENKINS_EXECUTORS=0"
+     - "JAVA_MAX_HEAP=2G"
       - "JAVA_MIN_HEAP=256m"
       - "JENKINS_ADMIN_PASSWORD=${JENKINS_PASSOWORD}"
       - "GIT_USER_NAME=hellgate75"
