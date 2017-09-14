@@ -17,6 +17,7 @@ ENV JENKINS_BIN_HOME="/usr/share/jenkins" \
     AGENT_ENVIRONMENT_BASH_SCRIPT_URL="" \
     SSH_KEY_FILES_TAR_GZ_URL="" \
     PROJECT_LIST_FILE_URL="" \
+    JENKINS_NODE_LIST_URL="" \
     GIT_USER_NAME="" \
     GIT_USER_EMAIL="" \
     SONARQUBE_URL="" \
@@ -81,6 +82,10 @@ COPY bin/get-admin-password.sh /usr/local/bin/get-admin-password
 COPY bin/configure-agent-node.sh /usr/local/bin/configure-agent-node
 
 COPY bin/install-projects.sh /usr/local/bin/install-jenkins-projects
+
+COPY bin/install-nodes.sh /usr/local/bin/install-jenkins-nodes
+
+ADD bin/configure-maven-repos.sh /usr/local/bin/configure-maven
 
 COPY files/default-plugins.txt $JENKINS_HOME/default-plugins.txt
 

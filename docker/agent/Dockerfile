@@ -16,7 +16,7 @@ ENV JENKINS_HOME=/home/jenkins \
     GO_OS="linux" \
     GO_ARCH="amd64" \
     DOCKER_COMPOSE_VERSION="1.16.1" \
-    DOCKER_DAEMON_ARGS="--experimental" \
+    DOCKER_DAEMON_ARGS="" \
     LOG="file"
 
 
@@ -84,7 +84,13 @@ ADD bin/custom-start-docker.sh /usr/local/bin/custom-start-docker
 
 ADD bin/custom-stop-docker.sh /usr/local/bin/custom-stop-docker
 
+ADD bin/dump-env.sh /usr/local/bin/dump-env
+
+ADD bin/configure-maven-repos.sh /usr/local/bin/configure-maven
+
 ADD files/docker /etc/init.d/docker
+
+ADD files/settings.xml $JENKINS_HOME/.jenkins/settings.xml.template
 
 RUN useradd -m -d $JENKINS_HOME -s /bin/bash -p jenkins jenkins \
     && echo "jenkins\njenkins"|sudo passwd jenkins \
@@ -107,6 +113,9 @@ RUN useradd -m -d $JENKINS_HOME -s /bin/bash -p jenkins jenkins \
     && mkdir -p /var/lib/docker \
     && chown -Rf jenkins:jenkins /home \
     && mkdir -p /home/jenkins/.m2 \
+    && mkdir -p /home/jenkins/.gradle \
+    && chown -Rf jenkins:jenkins /home/jenkins/.m2 \
+    && chown -Rf jenkins:jenkins /home/jenkins/.gradle \
     && chmod -Rf 666 /etc/docker
 USER jenkins
 

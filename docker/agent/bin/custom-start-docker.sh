@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [[ -e /home/jenkins/.jenkins/.env ]]; then
+	source /home/jenkins/.jenkins/.env
+fi
+
 # Ensure that all nodes in /dev/mapper correspond to mapped devices currently loaded by the device-mapper kernel driver
 dmsetup mknodes
 

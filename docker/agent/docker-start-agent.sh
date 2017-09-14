@@ -2,6 +2,10 @@
 
 DAEMON_COMMAND="-daemon"
 
+sudo chown -Rf jenkins:jenkins /home
+
+dump-env
+
 FIRST_RUN="0"
 
 if ! [[ -e $JENKINS_HOME/.ssh ]]; then

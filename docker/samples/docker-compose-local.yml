@@ -153,6 +153,7 @@ services:
       - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
       - "GIT_USER_NAME=hellgate75"
       - "GIT_USER_EMAIL=hellgate75@gmail.com"
+      - "DOCKER_DAEMON_ARGS=--insecure-registry nexus.cdnet:18999,nexus.cdnet:19000"
     volumes:
       - "jenkins_agent_1_data:/var/lib/docker"
       - "jenkins_agent_1_mvn_data:/home/jenkins/.m2"
@@ -183,6 +184,7 @@ services:
       - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
       - "GIT_USER_NAME=hellgate75"
       - "GIT_USER_EMAIL=hellgate75@gmail.com"
+      - "DOCKER_DAEMON_ARGS=--insecure-registry nexus.cdnet:18999,nexus.cdnet:19000"
     volumes:
       - "jenkins_agent_2_data:/var/lib/docker"
       - "jenkins_agent_2_mvn_data:/home/jenkins/.m2"
@@ -232,6 +234,7 @@ services:
       - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/jenkins-plugins.txt"
       - "PROJECT_LIST_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
       - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+      - "JENKINS_NODE_LIST_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/agent-list.txt"
       - "SONARQUBE_URL=http://sonar.cdnet:9000/sonar"
       - "SONARQUBE_APIKEY=${SONAR_APIKEY}"
       - "SONARQUBE_USER=sonar"
@@ -239,8 +242,8 @@ services:
       - "NEXUS_BASE_URL=http://nexus.cdnet:8081/"
       - "NEXUS_SNAPSHOT_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-snapshot"
       - "NEXUS_RELEASE_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-release"
-      - "NEXUS_STAGING_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-staging-docker"
-      - "NEXUS_PRODUCTION_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-production-docker"
+      - "NEXUS_STAGING_DOCKER_REPO_URL=nexus.cdnet:18999"
+      - "NEXUS_PRODUCTION_DOCKER_REPO_URL=nexus.cdnet:19000"
       - "NEXUS_USER=admin"
       - "NEXUS_PASSWORD=${NEXUS_PASSWORD}"
     ports:

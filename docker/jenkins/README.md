@@ -44,6 +44,7 @@ Environment variables:
 * `AGENT_ENVIRONMENT_BASH_SCRIPT_URL` : Remote bash script file url containing variable useful to configure Agent nodes (default: ) - work in progress
 * `SSH_KEY_FILES_TAR_GZ_URL`: Remote archive (tar-gzipped) file url containing SSH keys and configuration for jenkins user folder .ssh (default: )
 * `PROJECT_LIST_FILE_URL`: Remote text file url containing list of url of plugins to install (default: )
+* `JENKINS_NODE_LIST_URL` : Remote text file url containing list of nodes in format [name|host|num_executors|ssh_user|ssh_password|opz_port] (default: ), we suggest in compose to use jenkins/jenkins as user name and password, and linux-agent-1/linux-agent-2 as node hosts, names
 * `GIT_USER_NAME`: GIT user name to be applied to pull projects (default: )
 * `GIT_USER_EMAIL`: GIT user email id to be applied to pull projects (default: )
 * `SONARQUBE_URL`: Url of SonarQube® Server, for job environment purpose (default: )
