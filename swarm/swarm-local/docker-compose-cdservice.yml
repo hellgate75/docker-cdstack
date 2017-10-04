@@ -1,6 +1,110 @@
 version: "3.3"
 
 services:
+  jenkins-agent-odd:
+    image: hellgate75/CDSTACK_PROJECT_NAME-agent:latest
+    hostname: linux-agent-1
+    environment:
+      - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+      - "GIT_USER_NAME=hellgate75"
+      - "GIT_USER_EMAIL=hellgate75@gmail.com"
+      - "DOCKER_DAEMON_ARGS=--insecure-registry nexus.cdnet:18999,nexus.cdnet:19000"
+    volumes:
+      - "jenkins_agent_data:/var/lib/docker"
+      - "jenkins_agent_mvn_data:/home/jenkins/.m2"
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      # - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "4224:23"
+    networks:
+      pipeline-private-network:
+        aliases:
+          - linux-agent-1.cdnet
+          - linux-agent-1
+    deploy:
+      # privileged: true
+      # cap_add:
+      #   - IPC_LOCK
+      #   - SYS_ADMIN
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.9'
+          memory: 1536M
+        reservations:
+          cpus: '0.4'
+          memory: 900M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - cdstack.machine.name=odd-node
+        - cdstack.machine.type=worker
+        - cdstack.machine.visibility=private
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.projectnodename == odd-node
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
+  jenkins-agent-even:
+    image: hellgate75/CDSTACK_PROJECT_NAME-agent:latest
+    hostname: linux-agent-2
+    environment:
+      - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+      - "GIT_USER_NAME=hellgate75"
+      - "GIT_USER_EMAIL=hellgate75@gmail.com"
+      - "DOCKER_DAEMON_ARGS=--insecure-registry nexus.cdnet:18999,nexus.cdnet:19000"
+    volumes:
+      - "jenkins_agent_data:/var/lib/docker"
+      - "jenkins_agent_mvn_data:/home/jenkins/.m2"
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      # - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "4225:23"
+    networks:
+      pipeline-private-network:
+        aliases:
+          - linux-agent-2.cdnet
+          - linux-agent-2
+    deploy:
+      # privileged: true
+      # cap_add:
+      #   - IPC_LOCK
+      #   - SYS_ADMIN
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.9'
+          memory: 1536M
+        reservations:
+          cpus: '0.4'
+          memory: 900M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+      labels:
+        - cdstack.machine.name=even-node
+        - cdstack.machine.type=worker
+        - cdstack.machine.visibility=private
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.projectnodename == even-node
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
   jenkins:
     image: hellgate75/CDSTACK_PROJECT_NAME-jenkins:latest
     hostname: jenkins
@@ -13,6 +117,7 @@ services:
       - "PLUGINS_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/jenkins-plugins.txt"
       - "PROJECT_LIST_FILE_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
       - "SSH_KEY_FILES_TAR_GZ_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+      - "JENKINS_NODE_LIST_URL=https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/agent-list.txt"
       - "SONARQUBE_URL=http://sonar.cdnet:9000/sonar"
       - "SONARQUBE_APIKEY=3fa196d418de0d12d4f0c6996251c3a11ab5f9786c9d2072d1b82c1bd3455b06"
       - "SONARQUBE_USER=sonar"
@@ -30,8 +135,6 @@ services:
     volumes:
       - "jenkins_data:/var/jenkins_home"
       - /sys/fs/cgroup:/sys/fs/cgroup
-    ulimits:
-      memlock: -1
     networks:
       pipeline-private-network:
         aliases:
@@ -60,6 +163,12 @@ services:
         constraints:
           - node.role == worker
           - node.labels.projectnodename == jenkins
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
   nexus3:
     image: hellgate75/CDSTACK_PROJECT_NAME-nexus:latest
     hostname: nexus
@@ -75,8 +184,6 @@ services:
     volumes:
       - "nexus3_data:/nexus-data"
       - /sys/fs/cgroup:/sys/fs/cgroup
-    ulimits:
-      memlock: -1
     networks:
       pipeline-private-network:
         aliases:
@@ -105,6 +212,12 @@ services:
         constraints:
           - node.role == worker
           - node.labels.projectnodename == nexus3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
   sonarqube_db:
     image: mysql:5.7
     hostname: sonadb
@@ -115,8 +228,6 @@ services:
       - "MYSQL_PASSWORD=4n4lys1s"
     ports:
        - "6603:3306"
-    ulimits:
-      memlock: -1
     volumes:
       - "sonarqube_db_data:/var/lib/mysql"
       - /sys/fs/cgroup:/sys/fs/cgroup
@@ -147,12 +258,21 @@ services:
         constraints:
           - node.role == worker
           - node.labels.projectnodename == sonarqube
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
   sonarqube:
     image: hellgate75/CDSTACK_PROJECT_NAME-sonarqube:latest
     hostname: sonar
     environment:
       - "SONARQUBE_JDBC_USERNAME=sonar"
-      - "SONARQUBE_JDBC_PASSWORD=4n4lys1s"
+      - "SONARQUBE_JDBC_PASS  jenkins_agent_data:
+    external:
+      name: samples_jenkins_agent_data
+WORD=4n4lys1s"
       - "SONARQUBE_JDBC_URL=jdbc:mysql://sonardb:3306/sonarqube?useUnicode=true&characterEncoding=utf8&useSSL=false&useConfigs=maxPerformance"
       - "SONARQUBE_WEB_CONTEXT=/sonar"
       - "STARTUP_TIMEOUT_SECONDS=120"
@@ -165,8 +285,6 @@ services:
     volumes:
       - "sonarqube_data:/opt/sonarqube/data"
       - /sys/fs/cgroup:/sys/fs/cgroup
-    ulimits:
-      memlock: -1
     networks:
       pipeline-private-network:
         aliases:
@@ -195,6 +313,12 @@ services:
         constraints:
           - node.role == worker
           - node.labels.projectnodename == sonarqube
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
 networks:
   pipeline-private-network:
     external:
@@ -208,12 +332,16 @@ networks:
     #   config:
     #     - subnet: 172.120.0.0/16
         # - gateway: 10.255.1.1
-  # pipeline-db-network:
-  #   internal: true
 volumes:
   jenkins_data:
     external:
       name: samples_jenkins_data
+  jenkins_agent_data:
+    external:
+      name: samples_jenkins_agent_data
+  jenkins_agent_mvn_data:
+    external:
+      name: samples_jenkins_agent_mvn_data
   nexus3_data:
     external:
       name: samples_nexus3_data

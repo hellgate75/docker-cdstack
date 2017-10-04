@@ -11,8 +11,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /sys/fs/cgroup:/sys/fs/cgroup
       - "portainer_data:/data"
-    ulimits:
-      memlock: -1
     networks:
       pipeline-private-network:
         aliases:

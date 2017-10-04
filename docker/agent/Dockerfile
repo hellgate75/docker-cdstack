@@ -70,7 +70,8 @@ RUN apt-get update \
     && apt-get -y autoclean \
     && rm -rf /var/lib/apt/lists/* \
     && echo "Refinement of sshd config file ..." \
-    && sed -i "s/\#AuthorizedKeysFile/AuthorizedKeysFile/g" /etc/ssh/sshd_config \
+    && sed -i "s/\#Port.*/Port 23/g" /etc/ssh/sshd_config \
+   && sed -i "s/\#AuthorizedKeysFile/AuthorizedKeysFile/g" /etc/ssh/sshd_config \
     && sed -i "s/\#UseLogin no/UseLogin yes/g" /etc/ssh/sshd_config \
     && sed -i "s/\#PasswordAuthentication/PasswordAuthentication/g" /etc/ssh/sshd_config
 
@@ -123,7 +124,7 @@ WORKDIR $JENKINS_HOME
 
 COPY files/jenkins-ssh.tgz $JENKINS_HOME/jenkins-ssh.tgz
 
-EXPOSE 22
+EXPOSE 23
 
 VOLUME ["/var/lib/docker", "/home/jenkins/.m2"]
 

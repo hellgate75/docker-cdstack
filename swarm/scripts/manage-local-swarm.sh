@@ -12,10 +12,12 @@ if [[ "--destroy" == "$1" ]]; then
   ## Optional :
   ##   - Docker Machine Suffix name
   echo "$(logo)"
+  echo "Environment: $ENVIRONMENT"
   echo "Destroying Swarm nodes environment ..."
   SUFFIX="$(checkSuffix $2)"
   echo "Using suffix : $(echo "$SUFFIX" | sed 's/^-//g')"
-  docker-machine rm -f $PROJECT_PREFIX-jenkins$SUFFIX $PROJECT_PREFIX-nexus$SUFFIX $PROJECT_PREFIX-sonarqube$SUFFIX $PROJECT_PREFIX-leader$SUFFIX
+  docker-machine rm -f $PROJECT_PREFIX-jenkins$SUFFIX $PROJECT_PREFIX-jenkins-agent-1$SUFFIX $PROJECT_PREFIX-jenkins-agent-2$SUFFIX \
+                       $PROJECT_PREFIX-nexus$SUFFIX $PROJECT_PREFIX-sonarqube$SUFFIX $PROJECT_PREFIX-leader$SUFFIX
   exit 0
 elif [[ "--stop" == "$1" ]]; then
   ## Stop Swarm cluster vm nodes
@@ -24,10 +26,12 @@ elif [[ "--stop" == "$1" ]]; then
   ## Optional :
   ##   - Docker Machine Suffix name
   echo "$(logo)"
+  echo "Environment: $ENVIRONMENT"
   echo "Stopping Swarm nodes environment ..."
   SUFFIX="$(checkSuffix $2)"
   echo "Using suffix : $(echo "$SUFFIX" | sed 's/^-//g')"
-  docker-machine stop $PROJECT_PREFIX-jenkins$SUFFIX $PROJECT_PREFIX-nexus$SUFFIX $PROJECT_PREFIX-sonarqube$SUFFIX $PROJECT_PREFIX-leader$SUFFIX
+  docker-machine stop $PROJECT_PREFIX-jenkins$SUFFIX $PROJECT_PREFIX-jenkins-agent-1$SUFFIX $PROJECT_PREFIX-jenkins-agent-2$SUFFIX \
+                      $PROJECT_PREFIX-nexus$SUFFIX $PROJECT_PREFIX-sonarqube$SUFFIX $PROJECT_PREFIX-leader$SUFFIX
   exit 0
 elif [[ "--start" == "$1" ]]; then
   ## Start Swarm cluster vm nodes
@@ -36,10 +40,13 @@ elif [[ "--start" == "$1" ]]; then
   ## Optional :
   ##   - Docker Machine Suffix name
   echo "$(logo)"
+  echo "Environment: $ENVIRONMENT"
   echo "Starting Swarm nodes environment ..."
   SUFFIX="$(checkSuffix $2)"
   echo "Using suffix : $(echo "$SUFFIX" | sed 's/^-//g')"
   RESTARTED_JENKINS="0"
+  RESTARTED_JENKINS_AGENT_1="0"
+  RESTARTED_JENKINS_AGENT_2="0"
   RESTARTED_NEXUS="0"
   RESTARTED_SONAR="0"
   if ! [[ -z "$(docker-machine ls|grep $PROJECT_PREFIX-leader$SUFFIX)" ]]; then
@@ -63,9 +70,9 @@ elif [[ "--start" == "$1" ]]; then
       echo "Copying Swarm installation folder to $PROJECT_PREFIX-leader$SUFFIX Swarm Leader Node ..."
       ## Copying swarm stack source folder ...
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
-      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
-      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
-      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\"  /home/docker/swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-cdservice.yml"
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\"  /home/docker/swarm/docker-compose-cdservice.yml"
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-registry.yml"
       ## Copying source folder for further deployment ...
        echo "$(copySourceFolders "$PROJECT_PREFIX-leader$SUFFIX" "$DOCKER_FOLDER_PATH")"
     else
@@ -99,6 +106,56 @@ elif [[ "--start" == "$1" ]]; then
     fi
   else
     echo "ERROR : Jenkins Swarm cluster node doesn't exists please destroy and recreate Swarm Cluster!!"
+    exit 1
+  fi
+  if ! [[ -z "$(docker-machine ls|grep $PROJECT_PREFIX-jenkins-agent-1$SUFFIX)" ]]; then
+    if [[ -z "$(docker-machine ls|grep $PROJECT_PREFIX-jenkins-agent-1$SUFFIX|grep Running)" ]]; then
+      docker-machine start $PROJECT_PREFIX-jenkins-agent-1$SUFFIX
+      ## Local docker-machine Swarm Cluster
+      if [[ -z "$LEADER_IP" ]]; then
+        LEADER_IP="$(docker-machine ip $PROJECT_PREFIX-leader$SUFFIX)"
+      fi
+
+      remountDockerInSolidVolume "$PROJECT_PREFIX-jenkins-agent-1$SUFFIX"
+
+      docker-machine restart $PROJECT_PREFIX-jenkins-agent-1$SUFFIX
+
+      sleep 5
+
+      remountDockerLibHomeSolidVolume "$PROJECT_PREFIX-jenkins-agent-1$SUFFIX"
+
+      echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-jenkins-agent-1$SUFFIX" "$LEADER_IP")"
+      RESTARTED_JENKINS_AGENT_1="1"
+    else
+      echo "WARNING : Jenkins Agent 1 Swarm cluster node is running yet. Nothing to do!!"
+    fi
+  else
+    echo "ERROR : Jenkins Agent 1 Swarm cluster node doesn't exists please destroy and recreate Swarm Cluster!!"
+    exit 1
+  fi
+  if ! [[ -z "$(docker-machine ls|grep $PROJECT_PREFIX-jenkins-agent-2$SUFFIX)" ]]; then
+    if [[ -z "$(docker-machine ls|grep $PROJECT_PREFIX-jenkins-agent-2$SUFFIX|grep Running)" ]]; then
+      docker-machine start $PROJECT_PREFIX-jenkins-agent-2$SUFFIX
+      ## Local docker-machine Swarm Cluster
+      if [[ -z "$LEADER_IP" ]]; then
+        LEADER_IP="$(docker-machine ip $PROJECT_PREFIX-leader$SUFFIX)"
+      fi
+
+      remountDockerInSolidVolume "$PROJECT_PREFIX-jenkins-agent-2$SUFFIX"
+
+      docker-machine restart $PROJECT_PREFIX-jenkins-agent-2$SUFFIX
+
+      sleep 5
+
+      remountDockerLibHomeSolidVolume "$PROJECT_PREFIX-jenkins-agent-2$SUFFIX"
+
+      echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-jenkins-agent-2$SUFFIX" "$LEADER_IP")"
+      RESTARTED_JENKINS_AGENT_2="1"
+    else
+      echo "WARNING : Jenkins Agent 2 Swarm cluster node is running yet. Nothing to do!!"
+    fi
+  else
+    echo "ERROR : Jenkins Agent 2 Swarm cluster node doesn't exists please destroy and recreate Swarm Cluster!!"
     exit 1
   fi
   if ! [[ -z "$(docker-machine ls|grep $PROJECT_PREFIX-nexus$SUFFIX)" ]]; then
@@ -152,7 +209,7 @@ elif [[ "--start" == "$1" ]]; then
     exit 1
   fi
   ## if any of nodes is restarted advertise about Swarm cluster capabilities and dependencies
-  if [[ "1" == "$RESTARTED_JENKINS" || "1" == "$RESTARTED_NEXUS" || "1" == "$RESTARTED_SONAR" ]]; then
+  if [[ "1" == "$RESTARTED_JENKINS" || "1" == "$RESTARTED_JENKINS_AGENT_1" || "1" == "$RESTARTED_JENKINS_AGENT_2" || "1" == "$RESTARTED_NEXUS" || "1" == "$RESTARTED_SONAR" ]]; then
     echo "$(advertise "$SUFFIX" "$LEADER_IP")"
   fi
   exit 0
@@ -164,6 +221,7 @@ elif [[ "--create" == "$1" ]]; then
   ##   - Docker Machine Suffix name
   FORCE_REBUILD="0"
   echo "$(logo)"
+  echo "Environment: $ENVIRONMENT"
   echo "Creating Swarm nodes environment ..."
   if [[ "--force-rebuild" == "$2" ]]; then
     FORCE_REBUILD="1"
@@ -217,7 +275,6 @@ elif [[ "--create" == "$1" ]]; then
 
     ## Adjust local docker registry reference on docker config and restart docker
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sudo sed -i \"s/insecure-registry http:\\/\\/.*/insecure-registry http:\\\/\\\/$LEADER_IP:5000/g\" /var/lib/boot2docker/profile"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
     docker-machine ssh  $PROJECT_PREFIX-leader$SUFFIX "sudo /etc/init.d/docker restart"
 
     sleep 5
@@ -248,13 +305,15 @@ elif [[ "--create" == "$1" ]]; then
     ## Copying swarm stack source folder ...
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
 
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" /home/docker/swarm/docker-compose-registry.yml"
+
     ## create swarm folder on leader Swarm Cluster docker-machine, pull portainer.io docker image from Docker Hub librraries, and deploy portainer stack on Swarm Cluster (only on leader node)
     echo "Creating Portainer.IO on Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull portainer/portainer"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker deploy -c ./swarm/docker-compose-portainer.yml --resolve-image \"always\" --prune $PROJECT_PREFIX-cdmainstack"
     echo "Provisioning Swarm Master : $PROJECT_PREFIX-leader ..."
 
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" /home/docker/swarm/docker-compose-registry.yml"
 
     ## create docker registry folder on leader Swarm Cluster docker-machine, copy all configuration and security file in that folder, pull docker registy v2 docker image from Docker Hub librraries, and deploy docker registry stack on Swarm Cluster (only on leader node)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "mkdir -p /home/docker/registry"
@@ -266,14 +325,14 @@ elif [[ "--create" == "$1" ]]; then
 
     ## Deploy rehistry stack
     echo "Creating Docker registry v2 on Swarm Master : $PROJECT_PREFIX-leader$SUFFIX ..."
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker deploy -c ./swarm/docker-compose-registry.yml --resolve-image \"always\" --prune $PROJECT_PREFIX-cdregistrystack"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker deploy -c /home/docker/swarm/docker-compose-registry.yml --resolve-image \"always\" --prune $PROJECT_PREFIX-cdregistrystack"
 
     sleep 10
 
     ## Fill in Continuous Delivery deployment stack docker registry reference for worker local docker push
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" /home/docker/swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" /home/docker/swarm/docker-compose-registry.yml"
 
 
     AUTHORIZATION_TOKEN="$(curl -H 'Content-Type: application/json' -X POST -d '{"username":"admin","password":"admin123"}' http://$LEADER_IP:9091/api/auth|awk 'BEGIN {FS=OFS=":"}{print $2}'|awk 'BEGIN {FS=OFS="\""}{print $2}')"
@@ -335,6 +394,81 @@ elif [[ "--create" == "$1" ]]; then
     # docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "echo \"$REGISTRY_LOGIN\" >> /home/docker/.profile"
     echo "Swarm Worker : $PROJECT_PREFIX-jenkins already exists"
   fi
+
+  if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-jenkins-agent-1$SUFFIX)" ]]; then
+    echo "Creating Swarm Worker : $PROJECT_PREFIX-jenkins-agent-1$SUFFIX ..."
+    echo "Memory : $JENKINS_AGENTS_MEMORY MB"
+    echo "Disk : $JENKINS_AGENTS_DISK MB"
+    echo "CPUs : $JENKINS_AGENTS_CUPS"
+    docker-machine create --driver "virtualbox" --engine-insecure-registry "http://$LEADER_IP:5000" --engine-opt experimental=true \
+                          --engine-label projectnodename=jenkins --virtualbox-memory "$JENKINS_AGENTS_MEMORY" --virtualbox-disk-size "$JENKINS_AGENTS_DISK" \
+                          --virtualbox-cpu-count "$JENKINS_AGENTS_CUPS" --virtualbox-share-folder "$(pwd):hosthome"  $PROJECT_PREFIX-jenkins-agent-1$SUFFIX
+
+    createDockerInSolidVolume "$PROJECT_PREFIX-jenkins-agent-1$SUFFIX"
+
+    docker-machine restart $PROJECT_PREFIX-jenkins-agent-1$SUFFIX
+
+    sleep 5
+
+    mountDockerLibHomeSolidVolume "$PROJECT_PREFIX-jenkins-agent-1$SUFFIX"
+
+    ## Register Swarm worker node on Swarm Cluster Leader docker-machine
+    TOKEN_COMMAND="$(docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker swarm join-token worker"|grep docker)"
+    docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "eval $TOKEN_COMMAND"
+
+    PROVISION_JENKINS="1"
+
+    echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-jenkins-agent-1$SUFFIX" "$LEADER_IP")"
+
+    sleep 5
+
+    echo "Adding Swarm Node Label to $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
+    ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=odd-node $PROJECT_PREFIX-jenkins-agent-1$SUFFIX"
+
+  else
+    # REGISTRY_LOGIN="echo \"admin\" | docker login --username admin --password-stdin  http://$LEADER_IP:5000"
+    # docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "echo \"$REGISTRY_LOGIN\" >> /home/docker/.profile"
+    echo "Swarm Worker : $PROJECT_PREFIX-jenkins-agent-1 already exists"
+  fi
+
+  if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-jenkins-agent-2$SUFFIX)" ]]; then
+    echo "Creating Swarm Worker : $PROJECT_PREFIX-jenkins-agent-2$SUFFIX ..."
+    echo "Memory : $JENKINS_AGENTS_MEMORY MB"
+    echo "Disk : $JENKINS_AGENTS_DISK MB"
+    echo "CPUs : $JENKINS_AGENTS_CUPS"
+    docker-machine create --driver "virtualbox" --engine-insecure-registry "http://$LEADER_IP:5000" --engine-opt experimental=true \
+                          --engine-label projectnodename=jenkins --virtualbox-memory "$JENKINS_AGENTS_MEMORY" --virtualbox-disk-size "$JENKINS_AGENTS_DISK" \
+                          --virtualbox-cpu-count "$JENKINS_AGENTS_CUPS" --virtualbox-share-folder "$(pwd):hosthome"  $PROJECT_PREFIX-jenkins-agent-2$SUFFIX
+
+    createDockerInSolidVolume "$PROJECT_PREFIX-jenkins-agent-2$SUFFIX"
+
+    docker-machine restart $PROJECT_PREFIX-jenkins-agent-2$SUFFIX
+
+    sleep 5
+
+    mountDockerLibHomeSolidVolume "$PROJECT_PREFIX-jenkins-agent-2$SUFFIX"
+
+    ## Register Swarm worker node on Swarm Cluster Leader docker-machine
+    TOKEN_COMMAND="$(docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker swarm join-token worker"|grep docker)"
+    docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "eval $TOKEN_COMMAND"
+
+    PROVISION_JENKINS="1"
+
+    echo "$(installLocalCertificates "/hosthome/swarm-$ENVIRONMENT"  "$PROJECT_PREFIX-jenkins-agent-2$SUFFIX" "$LEADER_IP")"
+
+    sleep 5
+
+    echo "Adding Swarm Node Label to $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
+    ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=even-node $PROJECT_PREFIX-jenkins-agent-2$SUFFIX"
+
+  else
+    # REGISTRY_LOGIN="echo \"admin\" | docker login --username admin --password-stdin  http://$LEADER_IP:5000"
+    # docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "echo \"$REGISTRY_LOGIN\" >> /home/docker/.profile"
+    echo "Swarm Worker : $PROJECT_PREFIX-jenkins-agent-2 already exists"
+  fi
+
   if [[ -z "$(docker-machine ls | grep $PROJECT_PREFIX-nexus$SUFFIX)" ]]; then
     echo "Creating Swarm Worker : $PROJECT_PREFIX-nexus$SUFFIX ..."
     echo "Memory : $NEXUS_MEMORY MB"
@@ -454,6 +588,7 @@ elif [[ "--create" == "$1" ]]; then
     echo "Please wait since docker build and push complete ..."
     # echo "$(buildCDDockerImages "$PROJECT_PREFIX-leader$SUFFIX" "$LEADER_IP")"
     echo "Building $PROJECT_PREFIX-jenkins$SUFFIX docker image"
+    ## connect to leader, download Jenkins source, build Jenkins docker images and push Jenkins docker image on leader docker registry
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-jenkins")"  ]]; then
@@ -485,7 +620,7 @@ elif [[ "--create" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "jenkins" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
-
+      docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
     else
       ## Local tag for repository does exist ...
       echo "Local Jenkins image tag exists"
@@ -520,8 +655,82 @@ elif [[ "--create" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "jenkins" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
+      docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
     fi
-    ## connect to leader, download Nexus3 source, build Jenkins docker images and push Jenkins docker image on leader docker registry
+    echo "Building $PROJECT_PREFIX-agent$SUFFIX docker image"
+    ## connect to leader, download Jenkins Agent source, build Jenkins Agent docker images and push Jenkins Agent docker image on leader docker registry
+    if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+      ## Local tag for repository doesn't exist ...
+      if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")"  ]]; then
+        ## Force build of local docker image and create a tag for remote repository ...
+        FORCE_REBUILD="1"
+        echo "Force Rebuild $PROJECT_PREFIX-agent docker image ..."
+
+        if ! [[ -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+          ## Remove docker image
+          docker images|grep "hellgate75/$PROJECT_PREFIX-agent"|awk 'BEGIN {FS=OFS=" "}{print $3}'|xargs docker rmi -f
+        fi
+        ## rebuild and tag new docker image for Jenkins Agent
+        echo "Building docker image ..."
+        bash -c "cd $DOCKER_FOLDER_PATH/agent && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-agent . && docker tag hellgate75/$PROJECT_PREFIX-agent $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+        wait
+      else
+        bash -c "docker tag hellgate75/$PROJECT_PREFIX-agent $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+        wait
+      fi
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-agent$SUFFIX.tar ]]; then
+        echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" locally ..."
+        echo "Please wait for process to complete ..."
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "agent"
+      else
+        echo "Jenkins docker image export already exists ..."
+      fi
+      echo "Copying docker image archive to Leader and installing \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" remotely ..."
+      echo "Please wait for process to complete ..."
+      copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "agent" "$PROJECT_PREFIX-leader$SUFFIX"
+      echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" to remote repository ..."
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+    else
+      ## Local tag for repository does exist ...
+      echo "Local Jenkins Agent image tag exists"
+      if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+        ## Force build of local docker image and create a tag for remote repository ...
+        FORCE_REBUILD="1"
+        echo "Force Rebuild $PROJECT_PREFIX-agent docker image ..."
+
+        ## Remove previous registry tag
+        echo "Removing local docker image tag ..."
+        docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"|awk 'BEGIN {FS=OFS=" "}{print $3}'|xargs docker rmi -f
+
+        if ! [[ -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+          ## Remove docker image
+          echo "Removing local docker image ..."
+          docker images|grep "hellgate75/$PROJECT_PREFIX-agent"|awk 'BEGIN {FS=OFS=" "}{print $3}'|xargs docker rmi -f
+        fi
+        ## rebuild and tag new docker image for Jenkins
+        echo "Building docker image ..."
+        bash -c "cd $DOCKER_FOLDER_PATH/agent && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-agent . && docker tag hellgate75/$PROJECT_PREFIX-agent $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+        wait
+      fi
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-agent$SUFFIX.tar ]]; then
+        echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" locally ..."
+        echo "Please wait for process to complete ..."
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "agent"
+      else
+        echo "Jenkins Agent docker image export already exists ..."
+      fi
+      echo "Copying docker image archive to Leader and installing \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" remotely ..."
+      echo "Please wait for process to complete ..."
+      copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "agent" "$PROJECT_PREFIX-leader$SUFFIX"
+      echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" to remote repository ..."
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+    fi
+    echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
+    ## connect to leader, download Nexus3 source, build Nexus3 docker images and push Nexus3 docker image on leader docker registry
     echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus")" ]]; then
       ## Local tag for repository doesn't exist ...
@@ -554,7 +763,7 @@ elif [[ "--create" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "nexus" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
-
+      docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
     else
       ## Local tag for repository does exist ...
       echo "Local Nexus 3 image tag exists"
@@ -589,12 +798,16 @@ elif [[ "--create" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "nexus" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
+      docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
     fi
     ## connect to sonarqube worker docker-machine, and pull mysql docker image from docker hub libraries (faster stack creation)
-    echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
+    echo "Building $PROJECT_PREFIX-sonarqube-db$SUFFIX docker images"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull mysql:5.7"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker tag mysql:5.7 $LEADER_IP:5000/hellgate75/mysql:5.7"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/mysql:5.7"
+    docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-mysql:5.7"
+    echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
+    ## connect to leader, download SonarQube source, build SonarQube docker images and push SonarQube docker image on leader docker registry
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
@@ -626,7 +839,7 @@ elif [[ "--create" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "sonarqube" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
-
+      docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
     else
       ## Local tag for repository does exist ...
       echo "Local SonarQube image tag exists"
@@ -661,6 +874,7 @@ elif [[ "--create" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "sonarqube" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
+      docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
     fi
 
     ## create continuous delivery stack on Swarm cluster, connecting to leader (manager) node
@@ -680,6 +894,7 @@ elif [[ "--redeploy" == "$1" ]]; then
   ##   - force docker image built
   ##   - Docker Machine Suffix name
   echo "$(logo)"
+  echo "Environment: $ENVIRONMENT"
   echo "Redeploy CD on Swarm nodes environment ..."
   REBUILD="0"
   COPYYAML="0"
@@ -785,7 +1000,7 @@ elif [[ "--redeploy" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "jenkins" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
-
+      docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
     else
       ## Local tag for repository does exist ...
       echo "Local Jenkins image tag exists"
@@ -820,8 +1035,82 @@ elif [[ "--redeploy" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "jenkins" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
+      docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins"
     fi
+    echo "Building $PROJECT_PREFIX-agent$SUFFIX docker image"
+    ## connect to leader, download Jenkins Agent source, build Jenkins Agent docker images and push Jenkins Agent docker image on leader docker registry
+    if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+      ## Local tag for repository doesn't exist ...
+      if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")"  ]]; then
+        ## Force build of local docker image and create a tag for remote repository ...
+        FORCE_REBUILD="1"
+        echo "Force Rebuild $PROJECT_PREFIX-agent docker image ..."
+
+        if ! [[ -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+          ## Remove docker image
+          docker images|grep "hellgate75/$PROJECT_PREFIX-agent"|awk 'BEGIN {FS=OFS=" "}{print $3}'|xargs docker rmi -f
+        fi
+        ## rebuild and tag new docker image for Jenkins Agent
+        echo "Building docker image ..."
+        bash -c "cd $DOCKER_FOLDER_PATH/agent && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-agent . && docker tag hellgate75/$PROJECT_PREFIX-agent $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+        wait
+      else
+        bash -c "docker tag hellgate75/$PROJECT_PREFIX-agent $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+        wait
+      fi
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-agent$SUFFIX.tar ]]; then
+        echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" locally ..."
+        echo "Please wait for process to complete ..."
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "agent"
+      else
+        echo "Jenkins docker image export already exists ..."
+      fi
+      echo "Copying docker image archive to Leader and installing \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" remotely ..."
+      echo "Please wait for process to complete ..."
+      copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "agent" "$PROJECT_PREFIX-leader$SUFFIX"
+      echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" to remote repository ..."
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+    else
+      ## Local tag for repository does exist ...
+      echo "Local Jenkins Agent image tag exists"
+      if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+        ## Force build of local docker image and create a tag for remote repository ...
+        FORCE_REBUILD="1"
+        echo "Force Rebuild $PROJECT_PREFIX-agent docker image ..."
+
+        ## Remove previous registry tag
+        echo "Removing local docker image tag ..."
+        docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"|awk 'BEGIN {FS=OFS=" "}{print $3}'|xargs docker rmi -f
+
+        if ! [[ -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-agent")" ]]; then
+          ## Remove docker image
+          echo "Removing local docker image ..."
+          docker images|grep "hellgate75/$PROJECT_PREFIX-agent"|awk 'BEGIN {FS=OFS=" "}{print $3}'|xargs docker rmi -f
+        fi
+        ## rebuild and tag new docker image for Jenkins
+        echo "Building docker image ..."
+        bash -c "cd $DOCKER_FOLDER_PATH/agent && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-agent . && docker tag hellgate75/$PROJECT_PREFIX-agent $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+        wait
+      fi
+      if [[ "1" == "$FORCE_REBUILD" || ! -e ./docker-images/$ENVIRONMENT-agent$SUFFIX.tar ]]; then
+        echo "Exporting docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" locally ..."
+        echo "Please wait for process to complete ..."
+        exportContinuousDeliveryDockerImage "$(pwd)" "$SUFFIX" "$LEADER_IP" "agent"
+      else
+        echo "Jenkins Agent docker image export already exists ..."
+      fi
+      echo "Copying docker image archive to Leader and installing \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" remotely ..."
+      echo "Please wait for process to complete ..."
+      copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "agent" "$PROJECT_PREFIX-leader$SUFFIX"
+      echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent\" to remote repository ..."
+      docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
+   fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins &&  docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins && docker rmi -f hellgate75/$PROJECT_PREFIX-jenkins"
+    echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
     ## connect to leader, download Nexus3 source, build Jenkins docker images and push Jenkins docker image on leader docker registry
     echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus")" ]]; then
@@ -855,7 +1144,7 @@ elif [[ "--redeploy" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "nexus" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
-
+      docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
     else
       ## Local tag for repository does exist ...
       echo "Local Nexus 3 image tag exists"
@@ -890,13 +1179,16 @@ elif [[ "--redeploy" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "nexus" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
+      docker-machine ssh $PROJECT_PREFIX-nexus$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus"
     fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./nexus3 && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-nexus . && docker tag hellgate75/$PROJECT_PREFIX-nexus $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-nexus && docker rmi -f hellgate75/$PROJECT_PREFIX-nexus"
     ## connect to sonarqube worker docker-machine, and pull mysql docker image from docker hub libraries (faster stack creation)
-    echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
+    echo "Building $PROJECT_PREFIX-sonarqube-db$SUFFIX docker images"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker pull mysql:5.7"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker tag mysql:5.7 $LEADER_IP:5000/hellgate75/mysql:5.7"
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/mysql:5.7"
+    docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-mysql:5.7"
+   echo "Building $PROJECT_PREFIX-sonarqube$SUFFIX docker images"
     if [[ -z "$(docker images|grep "$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
       ## Local tag for repository doesn't exist ...
       if [[ "1" == "$FORCE_REBUILD" || -z "$(docker images|grep "hellgate75/$PROJECT_PREFIX-sonarqube")" ]]; then
@@ -928,7 +1220,7 @@ elif [[ "--redeploy" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "sonarqube" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
-
+      docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
     else
       ## Local tag for repository does exist ...
       echo "Local SonarQube image tag exists"
@@ -963,6 +1255,7 @@ elif [[ "--redeploy" == "$1" ]]; then
       copyAndInstallImageLocalDockerMachine "/hosthome" "$SUFFIX" "$LEADER_IP" "sonarqube" "$PROJECT_PREFIX-leader$SUFFIX"
       echo "Pushing docker image \"$LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube\" to remote repository ..."
       docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
+      docker-machine ssh $PROJECT_PREFIX-sonarqube$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube"
     fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./sonarqube && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-sonarqube . && docker tag hellgate75/$PROJECT_PREFIX-sonarqube $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube && docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-sonarqube && docker rmi -f hellgate75/$PROJECT_PREFIX-sonarqube"
   fi
@@ -971,9 +1264,9 @@ elif [[ "--redeploy" == "$1" ]]; then
     ## Copying swarm script source folder for docker stack rebuild ...
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
     ## Fill in Continuous Delivery deployment stack docker registry reference for worker local docker push
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-cdservice.yml"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\" swarm/docker-compose-cdservice.yml"
-    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\" swarm/docker-compose-registry.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\"  /home/docker/swarm/docker-compose-cdservice.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/mysql:5.7/$LEADER_IP:5000\\\/hellgate75\\\/mysql:5.7/g\"  /home/docker/swarm/docker-compose-cdservice.yml"
+    docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-registry.yml"
   fi
   ## redeploy continuous delivery stack on Swarm cluster, connecting to leader (manager) node
   echo "Creating cd service stack ..."

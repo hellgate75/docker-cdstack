@@ -2,7 +2,7 @@
 
 source scripts/common-functions.sh
 
-if [[ "local" != "$1" && "azure" != "$1" ]]; then
+if [[ "local" != "$1" && "azure" != "$1" && "aws" != "$1" ]]; then
   echo "Error: Invalid environment"
   echo "$(usage)"
   exit 0
