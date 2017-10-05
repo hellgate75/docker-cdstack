@@ -158,7 +158,7 @@ services:
       - "jenkins_agent_1_data:/var/lib/docker"
       - "jenkins_agent_1_mvn_data:/home/jenkins/.m2"
     ports:
-      - "4223:23"
+      - "4223:22"
     ulimits:
       memlock: -1
     networks:
@@ -189,7 +189,7 @@ services:
       - "jenkins_agent_2_data:/var/lib/docker"
       - "jenkins_agent_2_mvn_data:/home/jenkins/.m2"
     ports:
-      - "4224:23"
+      - "4224:22"
     ulimits:
       memlock: -1
     networks:

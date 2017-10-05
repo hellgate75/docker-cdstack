@@ -17,8 +17,6 @@ services:
       - "/home/docker/registry/htpasswd:/etc/docker/registry/htpasswd"
       - "/home/docker/registry/domain.crt:/etc/docker/registry/domain.crt"
       - "/home/docker/registry/domain.key:/etc/docker/registry/domain.key"
-    ulimits:
-      memlock: -1
     networks:
       pipeline-private-network:
         aliases:
