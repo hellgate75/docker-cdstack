@@ -441,11 +441,9 @@ elif [[ "--create" == "$1" ]]; then
     ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=even-node $PROJECT_PREFIX-jenkins-agent-1$SUFFIX"
 
-    ## Copying swarm stack source folder ...
-    echo "Copying Swarm installation folder to $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-    docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
-    echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-    docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
+    # ## Copying swarm stack source folder ...
+    # echo "Copying Swarm installation folder to $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
+    # docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
   else
     # REGISTRY_LOGIN="echo \"admin\" | docker login --username admin --password-stdin  http://$LEADER_IP:5000"
     # docker-machine ssh $PROJECT_PREFIX-jenkins$SUFFIX "echo \"$REGISTRY_LOGIN\" >> /home/docker/.profile"
@@ -482,12 +480,6 @@ elif [[ "--create" == "$1" ]]; then
     echo "Adding Swarm Node Label to $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
     ## Register qualification Swarm Node label on Swarm Cluster Leader docker-machine (used by app comose to define placement of instances)
     docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "docker node update --label-add projectnodename=odd-node $PROJECT_PREFIX-jenkins-agent-2$SUFFIX"
-
-    ## Copying swarm stack source folder ...
-    echo "Copying Swarm installation folder to $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-    docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "cp -Rf /hosthome/swarm-$ENVIRONMENT /home/docker/swarm"
-    echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-    docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
 
   else
     # REGISTRY_LOGIN="echo \"admin\" | docker login --username admin --password-stdin  http://$LEADER_IP:5000"
@@ -719,18 +711,6 @@ elif [[ "--create" == "$1" ]]; then
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
 
-      ## Executing docker-compose on odd node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-even.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-even.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker-compose --file /home/docker/swarm/docker-compose-jenkins-even.yml up -d"
-      ## Executing docker-compose on even node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-odd.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-odd.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker-compose --file /home/docker/swarm/docker-compose-jenkins-odd.yml up -d"
     else
       ## Local tag for repository does exist ...
       echo "Local Jenkins Agent image tag exists"
@@ -768,18 +748,6 @@ elif [[ "--create" == "$1" ]]; then
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
 
-      ## Executing docker-compose on odd node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-even.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-even.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker-compose /home/docker/swarm/docker-compose-jenkins-even.yml --file  up -d "
-      ## Executing docker-compose on even node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-odd.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-odd.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker-compose /home/docker/swarm/docker-compose-jenkins-odd.yml --file  up -d "
     fi
     echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
     ## connect to leader, download Nexus3 source, build Nexus3 docker images and push Nexus3 docker image on leader docker registry
@@ -1125,18 +1093,6 @@ elif [[ "--redeploy" == "$1" ]]; then
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
 
-      ## Executing docker-compose on odd node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-even.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-even.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker-compose --file /home/docker/swarm/docker-compose-jenkins-even.yml up -d"
-      ## Executing docker-compose on even node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-odd.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-odd.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker-compose --file /home/docker/swarm/docker-compose-jenkins-odd.yml up -d"
     else
       ## Local tag for repository does exist ...
       echo "Local Jenkins Agent image tag exists"
@@ -1174,18 +1130,6 @@ elif [[ "--redeploy" == "$1" ]]; then
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
       docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker pull $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-agent"
 
-      ## Executing docker-compose on odd node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-1$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-even.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-even.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-1$SUFFIX "docker-compose --file /home/docker/swarm/docker-compose-jenkins-even.yml up -d"
-      ## Executing docker-compose on even node ...
-      echo "Installing docker-compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "chmod 777 /home/docker/swarm/install-docker-compose.sh && /home/docker/swarm/install-docker-compose.sh"
-      echo "Creating compose in $PROJECT_PREFIX-jenkins-agent-2$SUFFIX Swarm Worker Node ..."
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "sed -i \"s/hellgate75/$LEADER_IP:5000\\\/hellgate75/g\" /home/docker/swarm/docker-compose-jenkins-odd.yml && sed -i \"s/CDSTACK_PROJECT_NAME/$PROJECT_PREFIX/g\"  /home/docker/swarm/docker-compose-jenkins-odd.yml"
-      docker-machine ssh $PROJECT_PREFIX-jenkins-agent-2$SUFFIX "docker-compose --file /home/docker/swarm/docker-compose-jenkins-odd.yml up -d"
    fi
     # docker-machine ssh $PROJECT_PREFIX-leader$SUFFIX "cd ./jenkins && docker build --rm --force-rm --no-cache --tag hellgate75/$PROJECT_PREFIX-jenkins . && docker tag hellgate75/$PROJECT_PREFIX-jenkins $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins &&  docker push $LEADER_IP:5000/hellgate75/$PROJECT_PREFIX-jenkins && docker rmi -f hellgate75/$PROJECT_PREFIX-jenkins"
     echo "Building $PROJECT_PREFIX-nexus$SUFFIX docker image"
