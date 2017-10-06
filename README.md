@@ -1,4 +1,4 @@
-<p aling="center" style="width: 100%"><img  width="165" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/docker.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="150" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/docker-swarm.png" /></p>
+<p aling="center" style="width:100%;"><img  width="165" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/docker.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="150" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/docker-swarm.png" /></p>
 
 
 # Docker CI-CD Sample #
@@ -13,9 +13,9 @@ This repository define a simple Docker Pipeline comosed by :
 This project has been defined to realize a simple resilient Pipeline, with auto-provisioned containers. It coud be a good example for defining an On-Premise or Cloud guested Swarm Nodes Production Environment.
 
 
-<p aling="center" style="width: 100%"><img  width="107" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/jenkins.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="490" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/nexus.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="225" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/sonarqube.jpg" /></p>
+<p aling="center" style="width:100%;"><img  width="107" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/jenkins.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="490" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/nexus.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="225" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/sonarqube.jpg" /></p>
 
-<p aling="center" style="width: 100%"><img  width="150" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/docker-registry.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="147" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/portainer-io.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="352" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/mysql.jpg" /></p>
+<p aling="center" style="width:100%;"><img  width="150" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/docker-registry.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="147" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/portainer-io.png" />&nbsp;&nbsp;&nbsp;&nbsp;<img  width="352" height="147" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/mysql.jpg" /></p>
 
 ### What is this repository for? ###
 
@@ -106,7 +106,7 @@ We provide and automated Swarm Cluster procedure, that creates swarm nodes via d
 
 For Local Swarm cluster here a design picture.
 
-<p align="center" style="width: 100%"><img  width="841" height="430" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/design1.png" /></p>
+<p align="center" style="width:100%;"><img  width="841" height="430" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/design1.png" /></p>
 
 Access to Swarm node management features is behalf bash shell script [/swarm/manage-swarm-env.sh](https://github.com/hellgate75/doker-cdstack/tree/master/swarm/manage-swarm-env.sh)
 
@@ -154,7 +154,7 @@ In a real continuous deivery environment, DevOps people should use network drive
 
 Here a sample effective design, just with one deployment connection (eg. It covers some app groups in staging environment).
 
-<p aling="center" style="width: 100%"><img  width="841" height="614" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/design2.png" /></p>
+<p aling="center" style="width:100%;"><img  width="1024" height="672" src="https://github.com/hellgate75/doker-cdstack/raw/master/images/design2.png" /></p>
 
 
 
