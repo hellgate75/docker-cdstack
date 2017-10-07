@@ -85,7 +85,7 @@ COPY bin/install-projects.sh /usr/local/bin/install-jenkins-projects
 
 COPY bin/install-nodes.sh /usr/local/bin/install-jenkins-nodes
 
-ADD bin/configure-maven-repos.sh /usr/local/bin/configure-maven
+COPY bin/configure-maven-repos.sh /usr/local/bin/configure-maven
 
 COPY files/default-plugins.txt $JENKINS_HOME/default-plugins.txt
 
