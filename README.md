@@ -168,7 +168,7 @@ You may obtain a copy of the License at
 
 [LGPL v.3](https://github.com/hellgate75/doker-cdstack/tree/master/LICENSE)
 
-You may also obtain distribution or production use written authorization, contactacting creator at
+You may also obtain distribution or production use written authorization, contacting creator at
 
 [Personal Email Address](mailto:hellgate75@gmail.com)
 
