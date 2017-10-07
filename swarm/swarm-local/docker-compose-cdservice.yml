@@ -115,8 +115,8 @@ services:
       - "NEXUS_BASE_URL=http://nexus.cdnet:8081/"
       - "NEXUS_SNAPSHOT_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-snapshot"
       - "NEXUS_RELEASE_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-release"
-      - "NEXUS_STAGING_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-staging-docker"
-      - "NEXUS_PRODUCTION_DOCKER_REPO_URL=http://nexus.cdnet:8081/repository/cdstack-production-docker"
+      - "NEXUS_STAGING_DOCKER_REPO_URL=nexus.cdnet:18999"
+      - "NEXUS_PRODUCTION_DOCKER_REPO_URL=nexus.cdnet:19000"
       - "NEXUS_USER=admin"
       - "NEXUS_PASSWORD=admin123"
     ports:

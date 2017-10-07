@@ -61,7 +61,7 @@ if [[ -e $AGENT_ENVIRONMENT_SCRIPT_FILE ]]; then
   source $AGENT_ENVIRONMENT_SCRIPT_FILE
 fi
 if ! [[ -e "$AGENT_GROOVY_TEMPLATE_FILE" ]]; then
-  echo "ERROR: Unable to find grrovy agent template class at : $AGENT_GROOVY_TEMPLATE_FILE"
+  echo "ERROR: Unable to find groovy agent template class at : $AGENT_GROOVY_TEMPLATE_FILE"
   exit 1
 fi
 ##Complete all environment variables substitutution
