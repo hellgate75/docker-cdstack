@@ -150,7 +150,7 @@ Unique available environment at the moment is : `local`
 
 In a real continuous deivery environment, DevOps people should use network drivers to connect clusters. Most effective one is WaveNet. This plugin gives you all together : inter-cluster connectivity, TLS connection intransit encryption and internal mini-dns service. It is more secure than any DMZ network, and it lives only in docker namespace where this network is created.
 
-[WaveNet Web Site](https://www.weave.works/docs/net/latest/overview) and here [docker installation instructions](https://www.weave.works/docs/net/latest/install/plugin/plugin-v2/#installation)
+[WaveNet Web Site](https://www.weave.works/docs/net/latest/overview), you can install that docker plugin on Swarm nodes following [docker installation instructions](https://www.weave.works/docs/net/latest/install/plugin/plugin-v2/#installation)
 
 Here a sample effective design, just with one deployment connection (eg. It covers some app groups in staging environment).
 
