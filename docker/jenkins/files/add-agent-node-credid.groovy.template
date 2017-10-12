@@ -29,7 +29,7 @@ import hudson.slaves.EnvironmentVariablesNodeProperty.Entry;
                     "num_executors",
                     Node.Mode.NORMAL,
                     "agent_node_label",
-                    new SSHLauncher("agent_host",agent_port,"agent_user","agent_password","","","","",""),
+                    new SSHLauncher("agent_host",agent_port,"agent_user","","","",""),
                     new RetentionStrategy.Always(),
                     new LinkedList())
   slave.getNodeProperties().add(envPro)

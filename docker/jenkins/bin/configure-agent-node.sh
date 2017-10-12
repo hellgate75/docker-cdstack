@@ -9,11 +9,15 @@ AGENT_HOST="$2"
 AGENT_EXECUTORS="$3"
 AGENT_USER="$4"
 AGENT_PASSWORD="$5"
-AGENT_PORT="${5:-"22"}"
+AGENT_PORT="${6:-"22"}"
+AGENT_SCRIPT_SUFFIX=""
+if [[ -z "$AGENT_PASSWORD" ]]; then
+  AGENT_SCRIPT_SUFFIX="-credid"
+fi
 
 SALT="$(date "+%s")"
 AGENT_ENVIRONMENT_SCRIPT_FILE="$JENKINS_HOME/.jenkins/agent-environment.sh"
-AGENT_GROOVY_TEMPLATE_FILE="$JENKINS_HOME/.jenkins/add-agent-node.groovy.template"
+AGENT_GROOVY_TEMPLATE_FILE="$JENKINS_HOME/.jenkins/add-agent-node$AGENT_SCRIPT_SUFFIX.groovy.template"
 AGENT_GROOVY_SCRIPT_FILE="$JENKINS_HOME/.jenkins/add-agent-node-$SALT.groovy"
 
 function download_file() {
@@ -73,6 +77,7 @@ sed -i "s/agent_node_label/$(sanitize $AGENT_NAME)/g" $AGENT_GROOVY_SCRIPT_FILE
 sed -i "s/agent_user/$(sanitize $AGENT_USER)/g" $AGENT_GROOVY_SCRIPT_FILE
 sed -i "s/agent_password/$(sanitize $AGENT_PASSWORD)/g" $AGENT_GROOVY_SCRIPT_FILE
 sed -i "s/num_executors/$(sanitize $AGENT_EXECUTORS)/g" $AGENT_GROOVY_SCRIPT_FILE
+sed -i "s/agent_port/$(sanitize $AGENT_PORT)/g" $AGENT_GROOVY_SCRIPT_FILE
 
 
 execute-groovy-script "$(get-admin-password)" "$AGENT_GROOVY_SCRIPT_FILE"

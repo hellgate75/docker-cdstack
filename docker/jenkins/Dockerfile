@@ -101,6 +101,8 @@ COPY files/create-ssh-credentials.groovy $JENKINS_BIN_HOME/ref/init.groovy.d/cre
 
 COPY files/add-agent-node.groovy.template $JENKINS_HOME/.jenkins/add-agent-node.groovy.template
 
+COPY files/add-agent-node-credid.groovy.template $JENKINS_HOME/.jenkins/add-agent-node-credid.groovy.template
+
 COPY files/create-custom-ssh-credentials.groovy.template $JENKINS_HOME/.jenkins/create-custom-ssh-credentials.groovy.template
 
 COPY files/hudson.plugins.git.GitTool.xml $JENKINS_HOME/hudson.plugins.git.GitTool.xml

@@ -29,7 +29,7 @@ RUN apt-get update \
                                    unzip python python-pip python-setuptools python-software-properties python3 python3-pip locales \
                                    python3-setuptools python3-software-properties software-properties-common groovy net-tools \
                                    build-essential python-software-properties openssh-server openssl sudo maven ruby-full \
-                                   ca-certificates lxc iptables \
+                                   ca-certificates lxc iptables iputils-* telnet \
     && pip install --upgrade pip \
     && pip3 install --upgrade pip \
     && echo "Installing Oracle JDK 8 ..." \
