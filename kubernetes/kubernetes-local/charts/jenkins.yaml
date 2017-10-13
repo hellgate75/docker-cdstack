@@ -1,0 +1,58 @@
+# Default values for jenkins.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+service:
+  name: jenkins2
+  type: ClusterIP
+  externalPort: 8080
+  internalPort: 8080
+  externalJnplPort: 50000
+  internalJnplPort: 50000
+ingress:
+  enabled: true
+  # Used to create an Ingress record.
+  hosts:
+    - jenkins2.local
+  annotations:
+    #kubernetes.io/ingress.class: jenkins2
+    # kubernetes.io/tls-acme: "true"
+  tls:
+    # Secrets must be manually created in the namespace.
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+variables:
+  javaMaxHeap: "2G"
+  javaMinHeap: "256m"
+  numberOfExecutors: "\"0\""
+  jenkinsAdminPassword: "4n4lys1s"
+  gitUserName: "hellgate75"
+  gitUserEmail: "hellgate75@gmail.com"
+  jenkinsPluginsFileUrl: "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/jenkins-plugins.txt"
+  jenkinsProjectsFileUrl: "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
+  jenkinsSSHArchiveUrl: "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
+  jenkinsAgentListFileUrl:  "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/agent-list-swarm.txt"
+  jenkinsSonarqubeUrl: "http://sonar.local:9000/sonar"
+  jenkinsSonarqubeApiKey: "3fa196d418de0d12d4f0c6996251c3a11ab5f9786c9d2072d1b82c1bd3455b06"
+  jenkinsSonarqubeUserName: "sonar"
+  jenkinsSonarqubeUserPassword:  "sonar"
+  jenkinsNexusUrl: "http://nexus.local:8081/"
+  jenkinsNexusSnapshotUrl: "http://nexus.cdnet:8081/repository/cdstack-snapshot"
+  jenkinsNexusReleaseUrl: "http://nexus.cdnet:8081/repository/cdstack-release"
+  jenkinsNexusDockerStagingUrl: "nexus.local:18999"
+  jenkinsNexusDockerProductionUrl: "nexus.local:19000"
+  jenkinsNexusUserName: "admin"
+  jenkinsNexusUserPassword: "admin123"
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
