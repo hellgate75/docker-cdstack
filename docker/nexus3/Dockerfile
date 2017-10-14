@@ -37,6 +37,10 @@ RUN yum -y install wget curl git maven gradle sudo net-tools vim patch make gcc 
 
 RUN echo -e "root\nroot" |  passwd
 
+RUN echo -e "nexus\nnexus" | passwd nexus
+
+RUN chown -Rf nexus:nexus /opt/sonatype
+
 WORKDIR ${NEXUS_HOME}
 
 VOLUME ${NEXUS_DATA}

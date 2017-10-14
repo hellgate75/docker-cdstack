@@ -4,4 +4,4 @@ if [[ "$#" -lt 3 ]]; then
   exit 1
 fi
 helm delete --purge "$3"
-helm install continuous-delivery/$1 --namespace default --name "$3" -f ./charts/$2.yaml
+helm install continuous-delivery/$1 --namespace default --name "$3" -f ./charts/$2.yaml "${@:4}"

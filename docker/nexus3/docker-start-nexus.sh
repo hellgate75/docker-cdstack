@@ -2,6 +2,7 @@
 
 DAEMON_COMMAND="-daemon"
 
+sudo chown -Rf nexus:nexus $NEXUS_DATA
 
 if [[ -z "$(nexus status | grep 'running')" ]]; then
 
@@ -17,10 +18,15 @@ if [[ -z "$(nexus status | grep 'running')" ]]; then
     sudo sed -i "s/-Xms.*/-Xms$JVM_MIN_HEAP/g" $NEXUS_HOME/bin/nexus.vmoptions
   fi
 
-  nohup bash -c "nexus run &> $NEXUS_DATA/log/nexus.log" &
+  bash -c "cd /opt/sonatype/nexus && bin/nexus run &> $NEXUS_DATA/log/nexus.log" &
+  if [[ -z "$(nexus status | grep 'running')" ]]; then
+    echo "Nexus3 OSS Server is NOW running!!"
+  else
+    echo "Nexus3 OSS Server is NOT running!!"
+  fi
 
 else
-  echo "Nexus3 OSS Server is running"
+  echo "Nexus3 OSS Server was already running"
 fi
 
 if [[ "" != "$(echo "$@" | grep "\\$DAEMON_COMMAND")" ]]; then
