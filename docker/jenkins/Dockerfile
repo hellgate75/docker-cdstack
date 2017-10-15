@@ -8,6 +8,7 @@ LABEL com.docker.image.name="Jenkins Pipeline Manager base image"
 LABEL com.docker.image.type="Jenkins Continuous Delivery Pipeline Manager Image"
 
 ENV JENKINS_BIN_HOME="/usr/share/jenkins" \
+    STARTUP_TIMEOUT_SECONDS=0 \
     JAVA_MAX_HEAP="2G" \
     JAVA_MIN_HEAP="256m" \
     JENKINS_ADMIN_PASSWORD="jenkins" \

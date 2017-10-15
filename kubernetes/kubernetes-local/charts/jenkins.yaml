@@ -25,6 +25,7 @@ ingress:
     #   hosts:
     #     - chart-example.local
 variables:
+  startUpTimeout: "\"180\""
   javaMaxHeap: "1G"
   javaMinHeap: "256m"
   numberOfExecutors: "\"0\""

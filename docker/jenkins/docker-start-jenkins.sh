@@ -15,6 +15,12 @@ function checkJenkinsIsUp {
   done
 }
 
+if [[ "0" != "$STARTUP_TIMEOUT_SECONDS" ]]; then
+  echo "Jenkins Startup Delay: $STARTUP_TIMEOUT_SECONDS s"
+  sleep "$STARTUP_TIMEOUT_SECONDS"
+fi
+
+
 mkdir -p "$JENKINS_HOME/.jenkins"
 
 PLUGINS_CODE="1"
