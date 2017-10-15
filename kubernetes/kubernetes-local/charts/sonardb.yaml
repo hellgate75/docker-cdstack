@@ -3,24 +3,18 @@
 # Declare variables to be passed into your templates.
 replicaCount: 1
 service:
-  name: nexus3
+  name: sonardb
   type: ClusterIP
-  externalVolumeName: samples-nexus3-data
-  externalPort: 8081
-  internalPort: 8081
-  externalServicePort: 2480
-  internalServicePort: 2480
-  externalDockerStagingPort: 18999
-  internalDockerStagingPort: 18999
-  externalDockerProdPort: 19000
-  internalDockerProdPort: 19000
+  externalVolumeName: "samples-sonarqube-db-data"
+  externalPort: 6603
+  internalPort: 3306
   nextwork:
     enabled: false
 ingress:
   enabled: true
   # Used to create an Ingress record.
   hosts:
-    - nexus3.local
+    - sonardb.local
   annotations:
     #kubernetes.io/ingress.class: jenkins2
     # kubernetes.io/tls-acme: "true"
@@ -30,9 +24,10 @@ ingress:
     #   hosts:
     #     - chart-example.local
 variables:
-  javaMaxMem: "1G"
-  javaMaxHeap: "1G"
-  javaMinHeap: "256m"
+  mySqlRootPassword: "4n4lys1s"
+  mySqlDatabaseName: "sonarqube"
+  mySqlUser: "sonar"
+  mySqlPassword: "4n4lys1s"
 
 # resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

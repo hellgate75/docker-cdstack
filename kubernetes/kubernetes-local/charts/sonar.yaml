@@ -3,24 +3,22 @@
 # Declare variables to be passed into your templates.
 replicaCount: 1
 service:
-  name: nexus3
+  name: sonar
   type: ClusterIP
-  externalVolumeName: samples-nexus3-data
-  externalPort: 8081
-  internalPort: 8081
-  externalServicePort: 2480
-  internalServicePort: 2480
-  externalDockerStagingPort: 18999
-  internalDockerStagingPort: 18999
-  externalDockerProdPort: 19000
-  internalDockerProdPort: 19000
+  externalVolumeName: "samples-sonarqube-data"
+  externalPort: 9000
+  internalPort: 9000
+  externalServicePort: 9001
+  internalServicePort: 9001
+  externalAuxPort: 9002
+  internalAuxPort: 9002
   nextwork:
     enabled: false
 ingress:
   enabled: true
   # Used to create an Ingress record.
   hosts:
-    - nexus3.local
+    - sonarqube.local
   annotations:
     #kubernetes.io/ingress.class: jenkins2
     # kubernetes.io/tls-acme: "true"
@@ -30,9 +28,13 @@ ingress:
     #   hosts:
     #     - chart-example.local
 variables:
-  javaMaxMem: "1G"
-  javaMaxHeap: "1G"
-  javaMinHeap: "256m"
+  sonarqubeJdbcUser: "sonar"
+  sonarqubeJdbcPassword: "4n4lys1s"
+  sonarqubeJdbcURL: "jdbc:mysql://sonardb-sonardb:6603/sonarqube?useUnicode=true&characterEncoding=utf8&useSSL=false&useConfigs=maxPerformance"
+  sonarqubeWebContext: "/sonar"
+  sonarqubeStartTimeoutSeconds: "\"150\""
+  sonarqubePluginsFileUrl: "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/sonarqube/sonarqube-plugins.txt"
+  sonarqubeReinstallPlugins: "\"1\""
 
 # resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

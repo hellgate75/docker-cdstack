@@ -7,6 +7,7 @@ fi
 
 if ! [[ -e $(pwd)/archives/$1.tgz ]]; then
   echo "Error: Tar Gzipped archive $1.tgz not found ..."
+  exit 1
 fi
 
 
@@ -17,10 +18,12 @@ container="$($(pwd)/find-k8s-pod-container.sh $2)"
 
 if [[ -z "$folder" ]]; then
   echo "Error: Folder for volume $volume_name not found ..."
+  exit 1
 fi
 
 if [[ -z "$container" ]]; then
   echo "Error: Pod container for app $2 not found ..."
+  exit 1
 fi
 
 echo "Restore volume to folder $folder in container $2 in progress ..."
@@ -39,4 +42,5 @@ if [[ "0" == "$?" ]]; then
   echo "container : $container status: $status"
 else
   echo "Error: Restore of volume to container $2 failed!!"
+  exit 1
 fi

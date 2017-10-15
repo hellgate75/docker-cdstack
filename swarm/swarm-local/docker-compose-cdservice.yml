@@ -259,10 +259,7 @@ services:
     hostname: sonar
     environment:
       - "SONARQUBE_JDBC_USERNAME=sonar"
-      - "SONARQUBE_JDBC_PASS  jenkins_agent_data:
-    external:
-      name: samples_jenkins_agent_data
-WORD=4n4lys1s"
+      - "SONARQUBE_JDBC_PASSWORD=4n4lys1s"
       - "SONARQUBE_JDBC_URL=jdbc:mysql://sonardb:3306/sonarqube?useUnicode=true&characterEncoding=utf8&useSSL=false&useConfigs=maxPerformance"
       - "SONARQUBE_WEB_CONTEXT=/sonar"
       - "STARTUP_TIMEOUT_SECONDS=120"

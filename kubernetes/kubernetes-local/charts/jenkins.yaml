@@ -25,7 +25,7 @@ ingress:
     #   hosts:
     #     - chart-example.local
 variables:
-  javaMaxHeap: "2G"
+  javaMaxHeap: "1G"
   javaMinHeap: "256m"
   numberOfExecutors: "\"0\""
   jenkinsAdminPassword: "4n4lys1s"
@@ -35,11 +35,11 @@ variables:
   jenkinsProjectsFileUrl: "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/project-list.txt"
   jenkinsSSHArchiveUrl: "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/rsa-keys.tgz"
   jenkinsAgentListFileUrl:  "https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/jenkins/agent-list-swarm.txt"
-  jenkinsSonarqubeUrl: "http://sonar-sonar:9000/sonar"
+  jenkinsSonarqubeUrl: "http://sonarqube-sonar:9000/sonar"
   jenkinsSonarqubeApiKey: "3fa196d418de0d12d4f0c6996251c3a11ab5f9786c9d2072d1b82c1bd3455b06"
   jenkinsSonarqubeUserName: "sonar"
   jenkinsSonarqubeUserPassword:  "sonar"
-  jenkinsNexusUrl: "http://nexus.local:8081/"
+  jenkinsNexusUrl: "http://nexus3-nexus3:8081/"
   jenkinsNexusSnapshotUrl: "http://nexus3-nexus3:8081/repository/cdstack-snapshot"
   jenkinsNexusReleaseUrl: "http://nexus3-nexus3:8081/repository/cdstack-release"
   jenkinsNexusDockerStagingUrl: "nexus3-nexus3:18999"
