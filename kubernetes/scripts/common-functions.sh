@@ -2,6 +2,7 @@
 
 
 MINIKUBE_VERSION="${MINIKUBE_VERSION:-"0.22.3"}"
+REMOTE_VOLUME_FOLDER_URL="${REMOTE_VOLUME_FOLDER_URL:-"https://s3-eu-west-1.amazonaws.com/ftorelli-docker-configuration/continuous-delivery/volumes"}"
 
 ##########################################################################
 ## Define project name and prject prefix                                ##
@@ -60,7 +61,8 @@ function usage() {
   echo "Usage : "
   echo "        manage-k8s-env.sh environment --create|--destroy|--start|--stop|--redeploy [environment] [suffix]"
   echo "        [environment]      Type of environment to use [local, aws or azure]"
-  echo "        --create     Crete or update platform in case of stop of nodes"
+  echo "        --status     Print status for nodes, based on public IPs/URLs"
+  echo "        --create     Create or update platform in case of stop of nodes"
   echo "               [--force-rebuild]  Force rebuild local docker images"
   echo "               [suffix]           If used qualify name of local or remote machines"
   echo "        --destroy    Destroy Platform"
@@ -105,18 +107,26 @@ function checkSuffix() {
 ##   - Advertise text                                                   ##
 ##########################################################################
 function advertise() {
-  # echo "You can access Portainer console at : http://$2:9091/"
-  # echo "Login to console with user 'admin' and password '$PORTAINER_ADMIN_PASSWORD', then manage your Swarm Cluster!!"
-  # echo ""
-  # echo "Jenkis console at : http://$2:8080/"
-  # echo "Nexus 3 OSS console at : http://$2:8085/"
-  # echo "SonarQube console at : http://$2:9000/sonar"
-  # echo ""
-  # echo "Before run your experience, please, verify yourself from logs that Jenkins, Sonaqube and Nexus are completely running ..."
-  # echo "docker-machine ssh $PROJECT_PREFIX-jenkins$1    and then docker ps and docker logs -f <jenkins-container-id>"
-  # echo "docker-machine ssh $PROJECT_PREFIX-nexus$1    and then docker ps and docker logs -f <nexus-container-id>"
-  # echo "docker-machine ssh $PROJECT_PREFIX-sonarqube$1    and then docker ps and docker logs -f <sonarqube-container-id>"
-  echo "Here ..."
+  echo " "
+  echo " "
+  echo "Containers can be not not ready. It could take up to 300 seconds, please check following service status:"
+  echo ""
+  echo "Jenkins status : $(getUrlStatus "$(getPublicURL "jenkins-public")")"
+  echo "Jenkins console at: $(getPublicURL "jenkins-public")"
+  echo ""
+  echo "Nexus 3 OSS status : $(getUrlStatus "$(getPublicURL "nexus3-public")")"
+  echo "Nexus 3 OSS console at: $(getPublicURL "nexus3-public")"
+  echo ""
+  echo "Nexus 3 Docker Staging Registry status : $(getUrlStatus "$(getPublicURL "nexus3-docker-staging")")"
+  echo "Nexus 3 Docker Staging Registry at: $(getPublicURL "nexus3-docker-staging"|awk 'BEGIN {FS=OFS="/"}{print $NF}')"
+  echo ""
+  echo "Nexus 3 Docker Production Registry status : $(getUrlStatus "$(getPublicURL "nexus3-docker-prod")")"
+  echo "Nexus 3 Docker Production Registry at: $(getPublicURL "nexus3-docker-prod"|awk 'BEGIN {FS=OFS="/"}{print $NF}')"
+  echo ""
+  echo "SonarQube status : $(getUrlStatus "$(getPublicURL "sonarqube-public")/sonar")"
+  echo "SonarQube console at: $(getPublicURL "sonarqube-public")/sonar"
+  echo " "
+  echo " "
 }
 
 function isVirtualBoxInstalled() {
@@ -172,6 +182,7 @@ function startMinikubeAndHelm() {
       helm init
       helm init --upgrade
       waitForPod "tiller" "Helm started, waiting for deploy of tiller pod ..." 6 15 true 1
+
      # fi
   else
     echo "Helm not installed"
@@ -179,11 +190,28 @@ function startMinikubeAndHelm() {
   waitforAllPodsToBeUp
 }
 
+function checkAndInstallS3Archive() {
+    if ! [[ -e "$(pwd)/mnt-point/archives/$1.tgz"  ]]; then
+      echo "Downloading $2 volume backup from S3 ..."
+      mkdir -p $(pwd)/mnt-point/archives
+      curl -L "$REMOTE_VOLUME_FOLDER_URL/$1.tgz" -o "$(pwd)/mnt-point/archives/$1.tgz"
+    fi
+}
+
+function getUrlStatus() {
+  curl -L --silent "$1" &> /dev/null
+  if [[ "$?" == "0" ]]; then
+    echo "Running"
+  else
+    echo "Stopped/Starting"
+  fi
+}
+
 function getAllPodStates() {
   echo "$(get pods  --all-namespaces=true | grep -v READY | awk 'BEGIN {FS=OFS=" "}{print $3"/"$4}'|awk 'BEGIN {FS=OFS="/"}{print ( $1==$2 && $3=="Running" )}')"
 }
 
-function waitforAllPodsToBeUp {
+function waitforAllPodsToBeUp() {
   POD_STATES="$(getAllPodStates)"
   ERRORS=0
   while read line;
@@ -192,7 +220,7 @@ function waitforAllPodsToBeUp {
       ERRORS=1
       break
     fi
-  done << POD_STATES
+  done <<< "$POD_STATES"
   if [[ "1" == "$ERRORS" ]]; then
     echo "Waiting for all Pods to be Up, Running and Ready"
     sleep 10
@@ -226,7 +254,7 @@ function waitForPod() {
     do
       echo "$2"
       sleep $3
-      cycles=$[cycles+1]
+      cycles=$(( cycles+1 ))
       if [[ $cycles -gt $4 ]]; then
         return 1
       fi
@@ -248,6 +276,15 @@ function waitForPod() {
 function startDashboard() {
     minikube dashboard
     kubectl cluster-info
+}
+
+function createPublicURL() {
+  kubectl expose service "$1" --port="$2" --type=NodePort --name="$3"
+  return "$?"
+}
+
+function getPublicURL() {
+    minikube service "$1" --url
 }
 
 function kubernetesStatus() {
@@ -292,7 +329,7 @@ function kubernetesStatus() {
 }
 
 function initialRefresh() {
-  eval $(minikube docker-env)
+  eval "$(minikube docker-env)"
   if ! [[ -z "$(which helm)" ]]; then
     echo "Starting helm ..."
     if ! [[ -e ~/.help ]]; then
@@ -437,22 +474,4 @@ function cleanPreviousInstallations() {
     sudo bash -c "apt-get -y remove kubelet kubeadm"
     sudo rm -rf /etc/apt/sources.list.d/kubernetes.list
   fi
-}
-
-##########################################################################
-## Export docker image to filesystem                                    ##
-## Parameters :                                                         ##
-##   - local path (string) [NOT nullable]                               ##
-##   - Suffix (string) [NOT nullable]                                   ##
-##   - LEADER IP (string) [NOT nullable]                                ##
-##   - docker image qualifier (string) [NOT nullable]                   ##
-##         eg.: jenkins, nexus, sonarqube                               ##
-##   - Docker Machine full name (string) [NOT nullable]                 ##
-## Returns:                                                             ##
-##   (none)                                                             ##
-##########################################################################
-function exportContinuousDeliveryDockerImage() {
-  mkdir -p $1/docker-images
-  rm -f $1/docker-images/$ENVIRONMENT-$4$2.tar
-  docker save --output $1/docker-images/$ENVIRONMENT-$4$2.tar $3:5000/hellgate75/$PROJECT_PREFIX-$4
 }

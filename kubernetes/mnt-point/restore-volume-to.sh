@@ -27,6 +27,7 @@ if [[ -z "$container" ]]; then
 fi
 
 echo "Restore volume to folder $folder in container $2 in progress ..."
+sudo rm -Rf $folder/*
 sudo cp $(pwd)/archives/$1.tgz $folder/$1.tar.gz
 sudo gunzip $folder/$1.tar.gz
 sudo tar -C $folder -xf $folder/$1.tar

@@ -60,8 +60,28 @@ if [[ "--destroy" == "$1" ]]; then
   echo "Using suffix : $(echo "$SUFFIX" | sed 's/^-//g')"
   minikube delete
   EXIT_STATE="$?"
-  rm -f $(pwd)/kubernetes-local/.kubestate
+  rm -f "$(pwd)/kubernetes-local/.kubestate"
   exit $EXIT_STATE
+elif [[ "--status" == "$1" ]]; then
+  ## Status for Kubernetes cluster vm nodes
+  ## Required :
+  ##   (none)
+  ## Optional :
+  ##   - Docker Machine Suffix name
+  echo "$(logo)"
+  echo "Environment: $ENVIRONMENT"
+  echo "Status of Kubernetes Cluster public nodes ..."
+  if [[ "0" == "$KUBERNETES_CLUSTER_INSTALLED" ]]; then
+   echo -e "WARNING: Kubernetes cluster applications not installed!!\nPlease run \"--create\" option as first..."
+   echo -e "\nExiting ..."
+   exit 0
+  fi
+  SUFFIX="$(checkSuffix $2)"
+  echo "Using suffix : $(echo "$SUFFIX" | sed 's/^-//g')"
+  echo "------------------------------------------------ READING STATE -------------------------------------------------"
+  echo "$(advertise)"
+  echo "------------------------------------------------- END OF STATE -------------------------------------------------"
+  exit 0
 elif [[ "--stop" == "$1" ]]; then
   ## Stop Kubernetes cluster vm nodes
   ## Required :
@@ -111,6 +131,9 @@ elif [[ "--start" == "$1" ]]; then
   EXIT_STATE="$?"
   echo "$EXIT_STATE"
   startDashboard
+  echo "------------------------------------------------ READING STATE -------------------------------------------------"
+  echo "$(advertise)"
+  echo "------------------------------------------------- END OF STATE -------------------------------------------------"
   exit $EXIT_STATE
 elif [[ "--create" == "$1" ]]; then
   ## Create first time Kubernetes cluster vm nodes
@@ -152,6 +175,15 @@ elif [[ "--create" == "$1" ]]; then
   echo "Installing continuous charts repository ...."
 
   installRepository "continuous-delivery" "https://hellgate75.github.io/continuous-delivery-charts/"
+
+  echo "Now checking and installing volume backup archives from S3 ...."
+  echo "Checking Nexus 3 volume backup ... "
+  checkAndInstallS3Archive "samples_nexus3_data" "Nexus 3"
+  echo "Checking SonarQube MySql Database volume backup ... "
+  checkAndInstallS3Archive "samples_sonarqube_db_data" "SonarQube MySQL"
+  echo "Checking SonarQube volume backup ... "
+  checkAndInstallS3Archive "samples_sonarqube_data" "SonarQube"
+
   CHART_STATE="$(installChart "local" "jenkins-agent" "jenkins-agent-1" "jenkins-agent-1")"
   EXIT_STATE="$?"
   echo -e "Installing Jenkins Agent 1 : \n$CHART_STATE"
@@ -176,7 +208,7 @@ elif [[ "--create" == "$1" ]]; then
   EXIT_STATE="$?"
   echo -e "Installing SonarQube MySQL Database : \n$CHART_STATE"
   echo "Response for SonarQube MySQL Database : $EXIT_STATE"
-  waitForPod "nexus3" "Waiting MySQL Database to be up and running ..." 6 50 false 1
+  waitForPod "sonardb" "Waiting MySQL Database to be up and running ..." 6 50 false 1
 
   minikube ssh "sudo bash -c \"cd /mnt/storage && ./restore-volume-to.sh samples_sonarqube_db_data sonardb \""
 
@@ -184,7 +216,7 @@ elif [[ "--create" == "$1" ]]; then
   EXIT_STATE="$?"
   echo -e "Installing SonarQube : \n$CHART_STATE"
   echo "Response for SonarQube : $EXIT_STATE"
-  waitForPod "nexus3" "Waiting SonarQube to be up and running ..." 6 100 false 1
+  waitForPod "sonarqube" "Waiting SonarQube to be up and running ..." 6 100 false 1
 
   minikube ssh "sudo bash -c \"cd /mnt/storage && ./restore-volume-to.sh samples_sonarqube_data sonarqube \""
 
@@ -192,13 +224,34 @@ elif [[ "--create" == "$1" ]]; then
   EXIT_STATE="$?"
   echo -e "Installing Jenkins : \n$CHART_STATE"
   echo "Response for Jenkins : $EXIT_STATE"
-  waitForPod "jenkins" "Waiting Jenkins to be up and running ..." 6 100 false 1 "-agent"
+  waitForPod "jenkins" "Waiting Jenkins to be up and running ..." 6 100 false 1 "\\-agent"
+
+  touch "$(pwd)/kubernetes-local/.kubestate"
+
+  minikube ssh "sudo bash -c \"cd /mnt/storage && docker restart $(/mnt/storage/find-k8s-pod-container.sh sonarqube) \""
+
+  echo "Waiting grace period before creating public ip(s)/url(s) ..."
+  sleep 300
+
+  echo "Creating Jenkins Access URL ... "
+  createPublicURL "jenkins-jenkins" "8080" "jenkins-public"
+  echo "Creating Nexus 3 Access URL ... "
+  createPublicURL "nexus3-nexus3" "8081" "nexus3-public"
+  echo "Creating Nexus 3 Docker Staging Access URL ... "
+  createPublicURL "nexus3-nexus3" "18999" "nexus3-docker-staging"
+  echo "Creating Nexus 3 Docker Productions Access URL ... "
+  createPublicURL "nexus3-nexus3" "19000" "nexus3-docker-prod"
+  echo "Creating SonarQube Access URL ... "
+  createPublicURL "sonarqube-sonar" "9000" "sonarqube-public"
+
+  echo "Waiting grace period before accessing service public access data ..."
+  sleep 15
 
   ## advertise about Kubernetes cluster capabilities and dependencies
-  echo "$(advertise "$SUFFIX" "LEADER_IP")"
+  echo "------------------------------------------------ READING STATE -------------------------------------------------"
+  echo "$(advertise)"
+  echo "------------------------------------------------- END OF STATE -------------------------------------------------"
   exit 0
-
-
 elif [[ "--redeploy" == "$1" ]]; then
   ## Create first time Kubernetes cluster vm nodes
   ## Required :
