@@ -187,50 +187,58 @@ elif [[ "--create" == "$1" ]]; then
   CHART_STATE="$(installChart "local" "jenkins-agent" "jenkins-agent-1" "jenkins-agent-1")"
   EXIT_STATE="$?"
   echo -e "Installing Jenkins Agent 1 : \n$CHART_STATE"
-  echo "Response for Jenkins Agent 1 : $EXIT_STATE"
-  waitForPod "jenkins-agent-1" "Waiting Jenkins Agent 1 to be up and running ..." 6 50 false 1
+  #echo "Response for Jenkins Agent 1 : $EXIT_STATE"
+  waitForPod "jenkins-agent-1" "Waiting for Jenkins Agent 1 to be up and running" 6 50 false 1
 
   CHART_STATE="$(installChart "local" "jenkins-agent" "jenkins-agent-2" "jenkins-agent-2")"
   EXIT_STATE="$?"
   echo -e "Installing Jenkins Agent 2 : \n$CHART_STATE"
-  echo "Response for Jenkins Agent 2 : $EXIT_STATE"
-  waitForPod "jenkins-agent-2" "Waiting Jenkins Agent 2 to be up and running ..." 6 50 false 1
+  #echo "Response for Jenkins Agent 2 : $EXIT_STATE"
+  waitForPod "jenkins-agent-2" "Waiting for Jenkins Agent 2 to be up and running" 6 50 false 1
 
   CHART_STATE="$(installChart "local" "nexus3" "nexus3" "nexus3")"
   EXIT_STATE="$?"
   echo -e "Installing Nexus 3 : \n$CHART_STATE"
-  echo "Response for Nexus 3 : $EXIT_STATE"
-  waitForPod "nexus3" "Waiting Nexus 3 to be up and running ..." 6 50 false 1
+  #echo "Response for Nexus 3 : $EXIT_STATE"
+  waitForPod "nexus3" "Waiting for Nexus 3 to be up and running" 6 50 false 1
 
   minikube ssh "sudo bash -c \"cd /mnt/storage && ./restore-volume-to.sh samples_nexus3_data nexus3 \""
 
   CHART_STATE="$(installChart "local" "sonardb" "sonardb" "sonardb")"
   EXIT_STATE="$?"
   echo -e "Installing SonarQube MySQL Database : \n$CHART_STATE"
-  echo "Response for SonarQube MySQL Database : $EXIT_STATE"
-  waitForPod "sonardb" "Waiting MySQL Database to be up and running ..." 6 50 false 1
+  #echo "Response for SonarQube MySQL Database : $EXIT_STATE"
+  waitForPod "sonardb" "Waiting for MySQL Database to be up and running" 6 50 false 1
 
   minikube ssh "sudo bash -c \"cd /mnt/storage && ./restore-volume-to.sh samples_sonarqube_db_data sonardb \""
 
   CHART_STATE="$(installChart "local" "sonar" "sonar" "sonarqube")"
   EXIT_STATE="$?"
   echo -e "Installing SonarQube : \n$CHART_STATE"
-  echo "Response for SonarQube : $EXIT_STATE"
-  waitForPod "sonarqube" "Waiting SonarQube to be up and running ..." 6 100 false 1
+  #echo "Response for SonarQube : $EXIT_STATE"
+  waitForPod "sonarqube" "Waiting for SonarQube to be up and running" 6 100 false 1
 
   minikube ssh "sudo bash -c \"cd /mnt/storage && ./restore-volume-to.sh samples_sonarqube_data sonarqube \""
+
+  echo "Wait for Sonarube to be up and running ..."
+  sleep 300
+  # waitForAppToBeUp "sonarqube-public" "/sonar" "SonarQube"
+
+  minikube ssh "docker restart \$(/mnt/storage/find-k8s-pod-container.sh sonarqube)"
+
+  echo "Wait for Sonarube to be up and running ..."
+  sleep 300
+  # waitForAppToBeUp "sonarqube-public" "/sonar" "SonarQube"
 
   CHART_STATE="$(installChart "local" "jenkins" "jenkins" "jenkins")"
   EXIT_STATE="$?"
   echo -e "Installing Jenkins : \n$CHART_STATE"
-  echo "Response for Jenkins : $EXIT_STATE"
-  waitForPod "jenkins" "Waiting Jenkins to be up and running ..." 6 100 false 1 "\\-agent"
+  #echo "Response for Jenkins : $EXIT_STATE"
+  waitForPod "jenkins" "Waiting for Jenkins to be up and running" 6 100 false 1 "\\-agent"
 
   touch "$(pwd)/kubernetes-local/.kubestate"
 
-  minikube ssh "sudo bash -c \"cd /mnt/storage && docker restart $(/mnt/storage/find-k8s-pod-container.sh sonarqube) \""
-
-  echo "Waiting grace period before creating public ip(s)/url(s) ..."
+  echo "Wait a grace period before read application state"
   sleep 300
 
   echo "Creating Jenkins Access URL ... "
@@ -244,8 +252,7 @@ elif [[ "--create" == "$1" ]]; then
   echo "Creating SonarQube Access URL ... "
   createPublicURL "sonarqube-sonar" "9000" "sonarqube-public"
 
-  echo "Waiting grace period before accessing service public access data ..."
-  sleep 15
+  sleep 10
 
   ## advertise about Kubernetes cluster capabilities and dependencies
   echo "------------------------------------------------ READING STATE -------------------------------------------------"

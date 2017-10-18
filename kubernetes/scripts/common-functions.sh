@@ -111,20 +111,25 @@ function advertise() {
   echo " "
   echo "Containers can be not not ready. It could take up to 300 seconds, please check following service status:"
   echo ""
-  echo "Jenkins status : $(getUrlStatus "$(getPublicURL "jenkins-public")")"
-  echo "Jenkins console at: $(getPublicURL "jenkins-public")"
+  JENKINS_IP="$(getPublicURL "jenkins-public")"
+  echo "Jenkins status : $(getUrlStatus "$JENKINS_IP")"
+  echo "Jenkins console at: $JENKINS_IP"
   echo ""
-  echo "Nexus 3 OSS status : $(getUrlStatus "$(getPublicURL "nexus3-public")")"
-  echo "Nexus 3 OSS console at: $(getPublicURL "nexus3-public")"
+  NEXUS3_IP="$(getPublicURL "nexus3-public")"
+  echo "Nexus 3 OSS status : $(getUrlStatus "$NEXUS3_IP")"
+  echo "Nexus 3 OSS console at: $NEXUS3_IP"
   echo ""
-  echo "Nexus 3 Docker Staging Registry status : $(getUrlStatus "$(getPublicURL "nexus3-docker-staging")")"
-  echo "Nexus 3 Docker Staging Registry at: $(getPublicURL "nexus3-docker-staging"|awk 'BEGIN {FS=OFS="/"}{print $NF}')"
+  DOCKER_STAGING_IP="$(getPublicURL "nexus3-docker-staging")"
+  echo "Nexus 3 Docker Staging Registry status : $(getUrlStatus "$DOCKER_STAGING_IP")"
+  echo "Nexus 3 Docker Staging Registry at: $(echo $DOCKER_STAGING_IP|awk 'BEGIN {FS=OFS="/"}{print $NF}')"
   echo ""
-  echo "Nexus 3 Docker Production Registry status : $(getUrlStatus "$(getPublicURL "nexus3-docker-prod")")"
-  echo "Nexus 3 Docker Production Registry at: $(getPublicURL "nexus3-docker-prod"|awk 'BEGIN {FS=OFS="/"}{print $NF}')"
+  DOCKER_PROD_IP="$(getPublicURL "nexus3-docker-prod")"
+  echo "Nexus 3 Docker Production Registry status : $(getUrlStatus "$DOCKER_PROD_IP")"
+  echo "Nexus 3 Docker Production Registry at: $(echo $DOCKER_PROD_IP||awk 'BEGIN {FS=OFS="/"}{print $NF}')"
   echo ""
-  echo "SonarQube status : $(getUrlStatus "$(getPublicURL "sonarqube-public")/sonar")"
-  echo "SonarQube console at: $(getPublicURL "sonarqube-public")/sonar"
+  SONARQUBE_IP="$(getPublicURL "sonarqube-public")"
+  echo "SonarQube status : $(getUrlStatus "$SONARQUBE_IP/sonar")"
+  echo "SonarQube console at: $SONARQUBE_IP/sonar"
   echo " "
   echo " "
 }
@@ -158,7 +163,7 @@ function isLinuxOS() {
 function startMinikubeAndHelm() {
   if ! [[ -z "$(which minikube)" ]]; then
     echo "Starting minikube ..."
-    minikube start --disk-size=60g --memory=5120 --cpus 4 --vm-driver virtualbox
+    minikube start --disk-size=60g --memory=6144 --cpus 5 --vm-driver virtualbox
     if [[ $# -gt 1 ]]; then
       sleep 5
       echo "Mounting folder $1 on minukube at $2 ..."
@@ -166,7 +171,7 @@ function startMinikubeAndHelm() {
       sleep 5
       vboxmanage sharedfolder add minikube --name "$2" --hostpath "$1" --automount
       sleep 5
-      minikube start --disk-size=60g --memory=5120 --cpus 4
+      minikube start --disk-size=60g --memory=6144 --cpus 5
     fi
     eval $(minikube docker-env)
   else
@@ -180,8 +185,9 @@ function startMinikubeAndHelm() {
     #   sleep 60
     # else
       helm init
+      waitForPod "tiller" "Helm started, waiting for deploy of tiller pod" 6 15 true 1
       helm init --upgrade
-      waitForPod "tiller" "Helm started, waiting for deploy of tiller pod ..." 6 15 true 1
+      waitForPod "tiller" "Helm started, waiting for upgrade of tiller pod" 6 15 true 1
 
      # fi
   else
@@ -208,10 +214,21 @@ function getUrlStatus() {
 }
 
 function getAllPodStates() {
-  echo "$(get pods  --all-namespaces=true | grep -v READY | awk 'BEGIN {FS=OFS=" "}{print $3"/"$4}'|awk 'BEGIN {FS=OFS="/"}{print ( $1==$2 && $3=="Running" )}')"
+  echo "$(kubectl get pods  --all-namespaces=true | grep -v READY | awk 'BEGIN {FS=OFS=" "}{print $3"/"$4}'|awk 'BEGIN {FS=OFS="/"}{print ( $1==$2 && $3=="Running" )}')"
 }
 
+MOVE_UP=$(printf "\033[1A")
+MOVE_DOWN=$(printf "\033[1B")
+MOVE_RIGHT=$(printf "\033[1C")
+
 function waitforAllPodsToBeUp() {
+  text="Waiting for all Pods to be Up, Running and Ready "
+  if [[ -z "$1" ]]; then
+    echo -ne "$text"
+  fi
+  PARAM="$1"
+  TEXTLEN=$(expr length "$text")
+  COUNTER=${PARAM:-$TEXTLEN}
   POD_STATES="$(getAllPodStates)"
   ERRORS=0
   while read line;
@@ -222,10 +239,24 @@ function waitforAllPodsToBeUp() {
     fi
   done <<< "$POD_STATES"
   if [[ "1" == "$ERRORS" ]]; then
-    echo "Waiting for all Pods to be Up, Running and Ready"
+    echo -ne "."
     sleep 10
-    waitforAllPodsToBeUp
+    COUNTER=$[COUNTER + 1]
+    waitforAllPodsToBeUp $COUNTER
+  else
+  echo -e "\n"
   fi
+}
+
+function waitForAppToBeUp() {
+  echo -ne "Waiting for $3 application to be available"
+  SONARQUBE_IP="$(getPublicURL "$1")"
+  while [[ "Running" != "$(getUrlStatus "$SONARQUBE_IP$2")" ]];
+  do
+    echo -ne "."
+    sleep 10
+  done
+  echo -e "\n"
 }
 
 function installRepository() {
@@ -248,28 +279,34 @@ function waitForPod() {
   if [[ $# -lt 5 ]]; then
     return 1
   fi
+  PARAM="$2 "
+  # TEXTLEN=$(expr length "$PARAM")
+  echo -ne "$PARAM"
   cycles=1
   if [[ -z "$7" ]]; then
     while [[ -z "$(kubectl get pods --all-namespaces=$5|grep $1|grep -i running|grep "$6/$6")" ]];
     do
-      echo "$2"
+      echo -ne "."
       sleep $3
       cycles=$(( cycles+1 ))
       if [[ $cycles -gt $4 ]]; then
+        echo -e "\n"
         return 1
       fi
     done
   else
     while [[ -z "$(kubectl get pods --all-namespaces=$5|grep $1|grep -i running|grep "$6/$6"|grep -v "$7")" ]];
     do
-      echo "$2"
+      echo -ne "."
       sleep $3
       cycles=$[cycles+1]
       if [[ $cycles -gt $4 ]]; then
+        echo -e "\n"
         return 1
       fi
     done
   fi
+  echo -e "\n"
   return 0
 }
 
@@ -415,6 +452,16 @@ function installHelm() {
     && rm -f ./get_helm.sh
     if ! [[ -z "$(which helm)" ]]; then
       echo "Helm installed!!"
+      echo "Now installing useful Helm plugins!!"
+      helm plugin install https://github.com/adamreese/helm-tiller
+      helm plugin install https://github.com/technosophos/helm-template
+      helm plugin install https://github.com/databus23/helm-diff
+      helm plugin install https://github.com/skuid/helm-value-store
+      helm plugin install https://github.com/adamreese/helm-env
+      helm plugin install https://github.com/adamreese/helm-nuke
+      helm plugin install https://github.com/mstrzele/helm-edit
+      echo "Here list of installed Helm plugins:"
+      helm plugin list
     else
       echo "Helm NOT installed!!"
     fi
